@@ -1,0 +1,22 @@
+---
+name: test
+description: testing issue comment templates
+body:
+  - type: dropdown
+    attributes:
+      label: dropdown
+      options:
+        - label: 'option A'
+          value: 'A'
+        - label: 'option B'
+          value: 'B'
+  - type: textarea
+    attributes:
+      label: 'Some text'
+      placeholder:
+        this is a placeholder
+  - type: input
+    attributes:
+      label: 'input'
+      value: 'some value'
+      format: text
