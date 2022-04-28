@@ -25,8 +25,6 @@ jobs:
       - uses: ./.github/workflows/partials/setup-node
         with:
           node-version: 16.x
-          os: ubuntu-latest
-          shell: bash
       - run: npm i --ignore-scripts --no-audit --no-fund
       - run: npm run lint
   test:
