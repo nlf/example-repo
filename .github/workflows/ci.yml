@@ -56,5 +56,8 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           os: ${{ matrix.platform.os }}
+      - run: |
+          pwd
+          ls
       - run: npm i --ignore-scripts --no-audit --no-fund
       - run: npm test --ignore-scripts
