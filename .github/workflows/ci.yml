@@ -51,10 +51,10 @@ jobs:
       run:
         shell: ${{ matrix.platform.shell }}
     steps:
-      - uses: actions/checkout@v3
       - uses: ./.github/workflows/partials/setup-node
         with:
           node-version: ${{ matrix.node-version }}
           os: ${{ matrix.platform.os }}
+      - uses: actions/checkout@v3
       - run: npm i --ignore-scripts --no-audit --no-fund
       - run: npm test --ignore-scripts
