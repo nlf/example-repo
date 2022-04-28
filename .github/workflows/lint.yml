@@ -1,0 +1,14 @@
+name: eslint
+on:
+  workflow_call:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/workflows/partials/setup-node
+        with:
+          node-version: 16.x
+      - run: npm i --ignore-scripts --no-audit --no-fund
+      - run: npm run lint
