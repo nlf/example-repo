@@ -7,6 +7,9 @@ inputs:
   os:
     description: Target operating system
     required: true
+  shell:
+    description: Shell to run steps in
+    required: true
 outputs:
   npm-version:
     description: Installed version of npm
@@ -19,6 +22,7 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
     - name: Update npm (windows)
+      shell: ${{ inputs.shell }}
       if: startsWith(inputs.os, 'windows') && (startsWith(inputs.node-version, '12.') || startsWith(inputs.node-version, '14.'))
       run: |
         npm pack npm@latest
@@ -28,9 +32,11 @@ runs:
         cd ..
         rmdir /s /q package
     - name: Update npm (node 10)
+      shell: ${{ inputs.shell }}
       if: startsWith(inputs.node-version, '10.')
       run: npm install --prefer-online --no-fund --no-audit --global npm@7
     - name: Update npm
+      shell: ${{ inputs.shell }}
       run: npm install --prefer-online --no-fund --no-audit --global npm@latest
     - id: npm-version
       name: Get npm version
