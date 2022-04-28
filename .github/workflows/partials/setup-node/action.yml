@@ -1,0 +1,38 @@
+name: Setup node
+description: Install the specified nodejs and update npm to the latest appropriate version
+inputs:
+  node-version:
+    description: Version of nodejs to be installed
+    required: true
+  os:
+    description: Target operating system
+    required: true
+outputs:
+  npm-version:
+    description: Installed version of npm
+    value: ${{ steps.npm-version.outputs.version }}
+runs:
+  using: composite
+  steps:
+    - name: Install node
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ inputs.node-version }}
+    - name: Update npm (windows)
+      if: startsWith(inputs.os, 'windows') && (startsWith(inputs.node-version, '12.') || startsWith(inputs.node-version, '14.'))
+      run: |
+        npm pack npm@latest
+        tar xf npm-*.tgz
+        cd package
+        node lib/npm.js install --prefer-online --no-fund --no-audit --global ../npm-*.tgz
+        cd ..
+        rmdir /s /q package
+    - name: Update npm (node 10)
+      if: startsWith(inputs.node-version, '10.')
+      run: npm install --prefer-online --no-fund --no-audit --global npm@7
+    - name: Update npm
+      run: npm install --prefer-online --no-fund --no-audit --global npm@latest
+    - id: npm-version
+      name: Get npm version
+      shell: bash
+      run: echo "::set-output name=version::$(npm -v)"
