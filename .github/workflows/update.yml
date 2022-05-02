@@ -27,3 +27,5 @@ jobs:
     needs: update
     if: needs.update.outputs.needs-tests == 'true'
     uses: ./.github/workflows/test.yml
+    with:
+      ref: 'main'

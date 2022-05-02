@@ -1,6 +1,10 @@
 name: test
 on:
   workflow_call:
+    inputs:
+      ref:
+        type: string
+        default: ''
 
 jobs:
   test:
@@ -27,6 +31,8 @@ jobs:
         shell: ${{ matrix.platform.shell }}
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.ref }}
       - uses: ./.github/workflows/partials/setup-node
         with:
           node-version: ${{ matrix.node-version }}
