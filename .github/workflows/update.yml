@@ -15,7 +15,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Maybe make some changes
-        id: commit
         run: |
           if [[ $((RANDOM%2)) -eq 1 ]]; then
             echo "t.pass('ran again')" >> test/index.js
@@ -27,6 +26,7 @@ jobs:
             echo "::set-output name=has-changes::true"
           fi
       - name: Commit and push changes
+        id: commit
         if: steps.status.outputs.has-changes == 'true'
         run: |
           git add test/index.js
