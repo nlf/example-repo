@@ -1,0 +1,23 @@
+name: Update a thing
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: add a commit
+        run: |
+          echo "tap.pass('ran again')" >> test/index.js
+          git add test/index.js
+          git config --local user.email "ops+npm-cli@npmjs.com"
+          git config --local user.name "npm cli ops bot"
+          git commit -m 'chore: add a test'
+          git push origin main
+  test:
+    uses: ./.github/workflows/test.yml
