@@ -10,22 +10,29 @@ jobs:
   update:
     runs-on: ubuntu-latest
     outputs:
-      needs-tests: ${{ steps.commit.outputs.needs-tests }}
+      needs-tests: ${{ steps.status.outputs.has_changes }}
     steps:
       - uses: actions/checkout@v2
-      - name: add a commit
+      - name: Maybe add a commit
         id: commit
         run: |
-          echo "tap.pass('ran again')" >> test/index.js
-          git add test/index.js
-          git config --local user.email "ops+npm-cli@npmjs.com"
-          git config --local user.name "npm cli ops bot"
-          git commit -m 'chore: add a test'
-          git push origin main
-          echo "::set-output name=needs-tests::true"
+          if [[ $((RANDOM%2)) -eq 1 ]]; then
+            echo "t.pass('ran again')" >> test/index.js
+            git add test/index.js
+            git config --local user.email "ops+npm-cli@npmjs.com"
+            git config --local user.name "npm cli ops bot"
+            git commit -m 'chore: add a test'
+            git push origin main
+          fi
+      - name: Check for changes
+        id: status
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::set-output name=has_changes::1"
+          fi
   test:
     needs: update
-    if: needs.update.outputs.needs-tests == 'true'
+    if: needs.update.outputs.needs-tests == '1'
     uses: ./.github/workflows/test.yml
     with:
       ref: 'main'
