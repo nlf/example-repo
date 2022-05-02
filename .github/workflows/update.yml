@@ -10,7 +10,8 @@ jobs:
   update:
     runs-on: ubuntu-latest
     outputs:
-      needs-tests: ${{ steps.status.outputs.has_changes }}
+      has-changes: ${{ steps.status.outputs.has-changes }}
+      commit-ref: ${{ steps.commit.outputs.commit-ref }}
     steps:
       - uses: actions/checkout@v2
       - name: Maybe make some changes
@@ -23,20 +24,21 @@ jobs:
         id: status
         run: |
           if [ -n "$(git status --porcelain)" ]; then
-            echo "::set-output name=has_changes::1"
+            echo "::set-output name=has-changes::true"
           fi
       - name: Commit and push changes
-        if: steps.status.outputs.has_changes == '1'
+        if: steps.status.outputs.has-changes == 'true'
         run: |
           git add test/index.js
           git config --local user.email "ops+npm-cli@npmjs.com"
           git config --local user.name "npm cli ops bot"
           git commit -m 'chore: add a test'
           git push origin main
+          echo "::set-output name=commit-ref::$(git log -1 -format='%H')"
 
   test:
     needs: update
-    if: needs.update.outputs.needs-tests == '1'
+    if: needs.update.outputs.has-changes == 'true'
     uses: ./.github/workflows/test.yml
     with:
-      ref: 'main'
+      ref: ${{ needs.update.outputs.commit-ref }}
