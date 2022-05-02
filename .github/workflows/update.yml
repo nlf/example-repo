@@ -9,9 +9,12 @@ permissions:
 jobs:
   update:
     runs-on: ubuntu-latest
+    outputs:
+      needs-tests: ${{ steps.commit.outputs.needs-tests }}
     steps:
       - uses: actions/checkout@v2
       - name: add a commit
+        id: commit
         run: |
           echo "tap.pass('ran again')" >> test/index.js
           git add test/index.js
@@ -19,5 +22,8 @@ jobs:
           git config --local user.name "npm cli ops bot"
           git commit -m 'chore: add a test'
           git push origin main
+          echo "::set-output name=needs-tests::true"
   test:
+    needs: update
+    if: needs.update.outputs.needs-tests == 'true'
     uses: ./.github/workflows/test.yml
