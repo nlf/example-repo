@@ -34,7 +34,7 @@ jobs:
           git config --local user.name "npm cli ops bot"
           git commit -m 'chore: add a test'
           git push origin main
-          echo "::set-output name=commit-ref::$(git log -1 -format='%H')"
+          echo "::set-output name=commit-ref::$(git rev-parse HEAD)"
 
   test:
     needs: update
