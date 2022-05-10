@@ -1,7 +1,6 @@
 name: Update a thing
 
 on:
-  workflow_dispatch:
   pull_request:
 
 permissions:
@@ -30,11 +29,12 @@ jobs:
         id: commit
         if: steps.status.outputs.has-changes == 'true'
         run: |
+          gh pr checkout ${{ github.event.pull_request.number }}
           git add test/index.js
           git config --local user.email "ops+npm-cli@npmjs.com"
           git config --local user.name "npm cli ops bot"
           git commit -m 'chore: add a test'
-          git push origin main
+          git push
           echo "::set-output name=commit-ref::$(git rev-parse HEAD)"
 
   lint:
