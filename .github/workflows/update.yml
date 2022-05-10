@@ -14,7 +14,7 @@ jobs:
       has-changes: ${{ steps.status.outputs.has-changes }}
       commit-ref: ${{ steps.commit.outputs.commit-ref }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Maybe make some changes
         run: |
           if [[ $((RANDOM%2)) -eq 1 ]]; then
