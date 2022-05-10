@@ -1,12 +1,18 @@
 name: eslint
 on:
   workflow_call:
+    inputs:
+      ref:
+        type: string
+        default: ''
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.ref }}
       - uses: ./.github/workflows/partials/setup-node
         with:
           node-version: 16.x
