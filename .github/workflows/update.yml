@@ -13,6 +13,7 @@ jobs:
     outputs:
       has-changes: ${{ steps.status.outputs.has-changes }}
       commit-ref: ${{ steps.commit.outputs.commit-ref }}
+      created-runs: ${{ steps.create-runs.outputs.created-runs }}
     steps:
       - uses: actions/checkout@v3
       - name: Maybe make some changes
@@ -39,6 +40,20 @@ jobs:
           git commit -m 'chore: add a test'
           git push
           echo "::set-output name=commit-ref::$(git rev-parse HEAD)"
+      - name: Create check runs on future commit
+        id: create-runs
+        if: steps.status.outputs.has-changes == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          CREATED_RUNS=""
+          CHECKSUITE_ID=$(gh api /repos/{owner}/{repo}/actions/runs/${{ github.run_id }} --jq .check_suite_id)
+          echo "Getting check-runs for suite $CHECKSUITE_ID"
+          gh api /repos/{owner}/{repo}/check-suites/$CHECKSUITE_ID/check-runs --jq '.check_runs.[].name' | while read CHECK; do
+            CHECK_ID=$(gh api /repos/{owner}/{repo}/check-runs -f name="$CHECK" -f head_sha=${{ steps.status.outputs.commit-ref }} -f status=in_progress --jq '.id')
+            CREATED_RUNS="${CREATED_RUNS},${CHECK_ID}"
+          done
+          echo "::set-output name=created-runs::$CREATED_RUNS"
 
   lint:
     needs: update
@@ -67,6 +82,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          echo "Runs that need updated: ${{ needs.update.outputs.created-runs }}"
           CHECKSUITE_ID=$(gh api /repos/{owner}/{repo}/actions/runs/${{ github.run_id }} --jq .check_suite_id)
           echo "Getting check-runs for suite $CHECKSUITE_ID"
           gh api /repos/{owner}/{repo}/check-suites/$CHECKSUITE_ID/check-runs --jq '.check_runs.[] | [.id, .name, .status, .conclusion] | join("|")' | while read CHECK; do
@@ -77,7 +93,9 @@ jobs:
             STATUS=${CHECK%%|*}
             CHECK=${CHECK:${#STATUS}+1}
             CONCLUSION=$CHECK
-            echo "Would create run for ID=$ID NAME=$NAME STATUS=$STATUS CONCLUSION=$CONCLUSION"
+            if [[ "$STATUS" == "completed" ]]; then
+              echo "Would create run for ID=$ID NAME=$NAME STATUS=$STATUS CONCLUSION=$CONCLUSION"
+            fi
           done
           # gh api /repos/{owner}/{repo}/check-runs \
           #   -f name="update" \
