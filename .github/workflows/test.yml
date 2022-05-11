@@ -31,13 +31,3 @@ jobs:
           shell: ${{ matrix.platform.shell }}
       - run: npm i --ignore-scripts --no-audit --no-fund
       - run: npm test --ignore-scripts
-      - name: Create check run
-        if: ${{ inputs.ref }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh api /repos/{owner}/{repo}/check-runs \
-            -f name="test (${{ matrix.node-version }}, ${{ matrix.platform.os }}, ${{ matrix.platform.shell }})" \
-            -f head_sha="${{ inputs.ref }}" \
-            -f status=completed \
-            -f conclusion="${{ job.status }}"

@@ -68,12 +68,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           CHECKSUITE_ID=$(gh api /repos/{owner}/{repo}/actions/runs/${{ github.run_id }} --jq .check_suite_id)
-          echo "******* Check Suite ID: $CHECKSUITE_ID"
-          CHECK_RUNS=$(gh api /repos/{owner}/{repo}/check-suites/$CHECKSUITE_ID/check-runs)
-          echo "******* Check runs: $CHECK_RUNS"
-          echo "******* lint: $(echo $CHECK_RUNS | jq '.check_runs.[] | select(.name | startswith('lint')')"
-          gh api /repos/{owner}/{repo}/check-runs \
-            -f name="update" \
-            -f head_sha="${{ needs.update.outputs.commit-ref }}" \
-            -f status=completed \
-            -f conclusion="${{ job.status }}"
+          for $check in $(gh api /repos/{owner}/{repo}/check-suites/$CHECKSUITE_ID/check-runs --jq '.[] | [.id, .name, .status, .conclusion] | join("|")'); do
+            echo $check
+          done
+          # gh api /repos/{owner}/{repo}/check-runs \
+          #   -f name="update" \
+          #   -f head_sha="${{ needs.update.outputs.commit-ref }}" \
+          #   -f status=completed \
+          #   -f conclusion="${{ job.status }}"
