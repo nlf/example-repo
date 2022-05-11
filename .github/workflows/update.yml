@@ -68,7 +68,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           CHECKSUITE_ID=$(gh api /repos/{owner}/{repo}/actions/runs/${{ github.run_id }} --jq .check_suite_id)
-          for $check in $(gh api /repos/{owner}/{repo}/check-suites/$CHECKSUITE_ID/check-runs --jq '.[] | [.id, .name, .status, .conclusion] | join("|")'); do
+          for check in $(gh api /repos/{owner}/{repo}/check-suites/$CHECKSUITE_ID/check-runs --jq '.[] | [.id, .name, .status, .conclusion] | join("|")'); do
             echo $check
           done
           # gh api /repos/{owner}/{repo}/check-runs \
