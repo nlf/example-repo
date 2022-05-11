@@ -70,8 +70,8 @@ jobs:
           CHECKSUITE_ID=$(gh api /repos/{owner}/{repo}/actions/runs/${{ github.run_id }} --jq .check_suite_id)
           echo "Getting check-runs for suite $CHECKSUITE_ID"
           CHECK_DATA=$(gh api /repos/{owner}/{repo}/check-suites/$CHECKSUITE_ID/check-runs --jq '.check_runs.[] | [.id, .name, .status, .conclusion] | join("|")')
-          echo "Processing check-runs..."
           IFS=$'\n' read -rd '' -a CHECK_RUNS <<< "$CHECK_DATA"
+          echo "Processing ${#CHECK_RUNS[@]} check-runs..."
           for CHECK in "${CHECK_RUNS[@]}"; do
             IFS='|' read -rd '' -a CHECK_SEGMENTS <<< "$CHECK"
             ID=${CHECK_SEGMENTS[0]}
