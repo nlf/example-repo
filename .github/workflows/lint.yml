@@ -23,9 +23,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh api /repos/{owner}/{repo}/commits/${{ github.event.after }}/check-runs
           gh api /repos/{owner}/{repo}/check-runs \
             -f name="lint" \
             -f head_sha="${{ inputs.ref }}" \
             -f status=completed \
-            -f conclusion="${{ job.status }}"
+            -f conclusion="${{ job.status }}" \
+            -f details_url="$(gh api /repos/{owner}/{repo}/actions/runs/${{ github.run_id }} --jq .html_url)"
