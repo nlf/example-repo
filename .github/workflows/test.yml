@@ -32,13 +32,12 @@ jobs:
       - run: npm i --ignore-scripts --no-audit --no-fund
       - run: npm test --ignore-scripts
       - name: Create check run
-        if: ${{ github.ref != inputs.ref }}
+        if: ${{ inputs.ref }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh api /repos/{owner}/{repo}/check-runs \
-            -f name="test / test (${{ matrix.node-version }}, ${{ matrix.platform.os }}, ${{ matrix.platform.shell }}" \
+            -f name="test (${{ matrix.node-version }}, ${{ matrix.platform.os }}, ${{ matrix.platform.shell }})" \
             -f head_sha="${{ inputs.ref }}" \
             -f status=completed \
-            -f conclusion="${{ job.status }}" \
-            -f details_url="https://github.com/${{ github.repository }}/runs/${{ github.run_id }}?check_suite_focus=true"
+            -f conclusion="${{ job.status }}"
