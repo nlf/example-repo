@@ -60,6 +60,7 @@ jobs:
       - update
       - lint
       - test
+    runs-on: ubuntu-latest
     steps:
       - name: Create check run
         env:
