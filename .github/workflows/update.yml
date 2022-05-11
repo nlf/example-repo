@@ -50,7 +50,7 @@ jobs:
           CHECKSUITE_ID=$(gh api /repos/{owner}/{repo}/actions/runs/${{ github.run_id }} --jq .check_suite_id)
           echo "Getting check-runs for suite $CHECKSUITE_ID"
           gh api /repos/{owner}/{repo}/check-suites/$CHECKSUITE_ID/check-runs --jq '.check_runs.[].name' | while read CHECK; do
-            CHECK_ID=$(gh api /repos/{owner}/{repo}/check-runs -f name="$CHECK" -f head_sha=${{ steps.status.outputs.commit-ref }} -f status=in_progress --jq '.id')
+            CHECK_ID=$(gh api /repos/{owner}/{repo}/check-runs -f name="$CHECK" -f head_sha=${{ steps.commit.outputs.commit-ref }} -f status=in_progress --jq '.id')
             CREATED_RUNS="${CREATED_RUNS},${CHECK_ID}"
           done
           echo "::set-output name=created-runs::$CREATED_RUNS"
