@@ -69,16 +69,15 @@ jobs:
         run: |
           CHECKSUITE_ID=$(gh api /repos/{owner}/{repo}/actions/runs/${{ github.run_id }} --jq .check_suite_id)
           echo "Getting check-runs for suite $CHECKSUITE_ID"
-          CHECK_DATA=$(gh api /repos/{owner}/{repo}/check-suites/$CHECKSUITE_ID/check-runs --jq '.check_runs.[] | [.id, .name, .status, .conclusion] | join("|")')
-          IFS=$'\n' read -rd '' -a CHECK_RUNS <<< "$CHECK_DATA"
-          echo "Processing ${#CHECK_RUNS[@]} check-runs..."
-          for CHECK in "${CHECK_RUNS[@]}"; do
-            IFS='|' read -rd '' -a CHECK_SEGMENTS <<< "$CHECK"
-            ID=${CHECK_SEGMENTS[0]}
-            NAME=${CHECK_SEGMENTS[1]}
-            STATUS=${CHECK_SEGMENTS[2]}
-            CONCLUSION=${CHECK_SEGMENTS[3]}
-            echo "Would create check run with: ID=$ID NAME=$NAME STATUS=$STATUS CONCLUSION=$CONCLUSION"
+          gh api /repos/{owner}/{repo}/check-suites/$CHECKSUITE_ID/check-runs --jq '.check_runs.[] | [.id, .name, .status, .conclusion] | join("|")' | while read CHECK; do
+            ID=${CHECK%%|*}
+            CHECK=${CHECK:${#ID}+1}
+            NAME=${CHECK%%|*}
+            CHECK=${CHECK:${#NAME}+1}
+            STATUS=${CHECK%%|*}
+            CHECK=${CHECK:${#STATUS}+1}
+            CONCLUSION=$CHECK
+            echo "Would create run for ID=$ID NAME=$NAME STATUS=$STATUS CONCLUSION=$CONCLUSION"
           done
           # gh api /repos/{owner}/{repo}/check-runs \
           #   -f name="update" \
