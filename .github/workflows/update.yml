@@ -55,7 +55,7 @@ jobs:
       ref: ${{ needs.update.outputs.commit-ref }}
 
   create-run:
-    if: ${{ always() }}
+    if: ${{ needs.update.outputs.has-changes == 'true' }}
     needs:
       - update
       - lint
