@@ -23,6 +23,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          echo '${{ toJSON(github) }}'
+          echo '${{ toJSON(job) }}'
           gh api /repos/{owner}/{repo}/check-runs \
             -f name="lint" \
             -f head_sha="${{ inputs.ref }}" \
