@@ -23,7 +23,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh api /repos/{owner}/{repo}/actions/runs/${{ github.run_id }}
+          CHECKSUITE_ID=$(gh api /repos/{owner}/{repo}/actions/runs/${{ github.run_id }} --jq .check_suite_id)
+          echo $CHECKSUITE_ID
+          gh api "/repos/{owner}/{repo}/check-suites/$CHECKSUITE_ID/check-runs?check_name=lint%20%2f%20lint"
+          echo "******************"
+          echo "******************"
+          echo "******************"
           gh api /repos/{owner}/{repo}/check-runs \
             -f name="lint" \
             -f head_sha="${{ inputs.ref }}" \
