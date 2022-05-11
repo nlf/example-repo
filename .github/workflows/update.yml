@@ -68,14 +68,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           CHECKSUITE_ID=$(gh api /repos/{owner}/{repo}/actions/runs/${{ github.run_id }} --jq .check_suite_id)
+          echo "Getting check-runs for suite $CHECKSUITE_ID"
           CHECK_DATA=$(gh api /repos/{owner}/{repo}/check-suites/$CHECKSUITE_ID/check-runs --jq '.check_runs.[] | [.id, .name, .status, .conclusion] | join("|")')
+          echo "Processing check-runs..."
           IFS=$'\n' read -rd '' -a CHECK_RUNS <<< "$CHECK_DATA"
           for CHECK in "${CHECK_RUNS[@]}"; do
             IFS='|' read -rd '' -a CHECK_SEGMENTS <<< "$CHECK"
-            ID="${CHECK_SEGMENTS[0]}"
-            NAME="${CHECK_SEGMENTS[1]}"
-            STATUS="${CHECK_SEGMENTS[2]}"
-            CONCLUSION="${CHECK_SEGMENTS[3]}"
+            ID=${CHECK_SEGMENTS[0]}
+            NAME=${CHECK_SEGMENTS[1]}
+            STATUS=${CHECK_SEGMENTS[2]}
+            CONCLUSION=${CHECK_SEGMENTS[3]}
             echo "Would create check run with: ID=$ID NAME=$NAME STATUS=$STATUS CONCLUSION=$CONCLUSION"
           done
           # gh api /repos/{owner}/{repo}/check-runs \
