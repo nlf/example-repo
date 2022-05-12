@@ -110,7 +110,7 @@ jobs:
                 -f conclusion=$CONCLUSION \
                 -f started_at=$STARTED_AT \
                 -f completed_at=$COMPLETED_AT \
-                -f output="{"\""title"\"": "\""$NAME"\"", "\""summary"\"": "\""$DETAILS_URL"\""}" \
+                -f output='{"title": "'"$NAME"'", "summary": "'"$DETAILS_URL"'"}' \
                 --jq '{ id, name, status, conclusion, output }'
             fi
           done
