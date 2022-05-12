@@ -50,7 +50,8 @@ jobs:
             -f external_id=post_mod_actions \
             -f name="Running post-modification actions..." \
             -f head_sha=${{ steps.commit.outputs.commit-ref }} \
-            -f status=in_progress)
+            -f status=in_progress \
+            --jq .id)
           echo "::set-output name=check-id::$CHECK_ID"
 
   lint:
@@ -83,20 +84,16 @@ jobs:
           echo "Looks like we need to update ID=${{ needs.update.outputs.check-id }}"
           CHECKSUITE_ID=$(gh api /repos/{owner}/{repo}/actions/runs/${{ github.run_id }} --jq .check_suite_id)
           echo "Getting check-runs for suite $CHECKSUITE_ID"
-          gh api /repos/{owner}/{repo}/check-suites/$CHECKSUITE_ID/check-runs --jq '.check_runs.[] | [.id, .external_id, .name, .status, .conclusion] | join("|")' | while read CHECK; do
+          gh api /repos/{owner}/{repo}/check-suites/$CHECKSUITE_ID/check-runs --jq '.check_runs.[] | [.id, .name, .status, .conclusion] | join("|")' | while read CHECK; do
             ID=${CHECK%%|*}
             CHECK=${CHECK:${#ID}+1}
-            EXTERNAL_ID=${CHECK%%|*}
-            CHECK=${CHECK:${#EXTERNAL_ID}+1}
             NAME=${CHECK%%|*}
             CHECK=${CHECK:${#NAME}+1}
             STATUS=${CHECK%%|*}
             CHECK=${CHECK:${#STATUS}+1}
             CONCLUSION=$CHECK
-            echo "Got run ID=$ID EXTERNAL_ID=$EXTERNAL_ID NAME=$NAME"
-            if [[ "$ID" == "post_mod_actions" ]]; then
-              echo "Would update existing run"
-            else
+            echo "Got run ID=$ID NAME=$NAME"
+            if [[ "$STATUS" == "completed" ]]; then
               echo "Would create run with STATUS=$STATUS CONCLUSION=$CONCLUSION"
             fi
           done
