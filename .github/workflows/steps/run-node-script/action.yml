@@ -1,0 +1,27 @@
+name: Run a node script
+description: Run a specified node script
+inputs:
+  path:
+    description: Path to the project containing the script
+    required: true
+  script:
+    description: The name of the script to run
+    required: true
+  args:
+    description: Arguments to pass to the script
+  node-version:
+    description: Version of nodejs to install
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Setup node
+      uses: ./.github/workflows/steps/setup-node
+      with:
+        node-version: ${{ inputs.node-version }}
+    - name: Install dependencies
+      shell: bash
+      run: npm install --ignore-scripts --no-fund --no-audit
+    - name: Run script
+      shell: bash
+      run: npm run ${{ inputs.script }} -- ${{ inputs.args }}

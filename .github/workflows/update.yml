@@ -45,14 +45,15 @@ jobs:
         if: steps.status.outputs.has-changes == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          CHECK_ID=$(gh api /repos/{owner}/{repo}/check-runs \
-            -f external_id=post_mod_actions \
-            -f name="Running post-modification actions..." \
-            -f head_sha=${{ steps.commit.outputs.commit-ref }} \
-            -f status=in_progress \
-            --jq .id)
-          echo "::set-output name=check-id::$CHECK_ID"
+        uses: ./.github/workflows/steps/run-node-script
+        with:
+          path: ./.github/scripts
+          script: create-check-run
+          args: |
+            --repository=${{ github.repository }} \
+            --head_sha=${{ steps.commit.outputs.commit-ref }} \
+            --name="Running post-modification actions" \
+            --status=in_progress
 
   lint:
     needs: update
