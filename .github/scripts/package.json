@@ -10,6 +10,7 @@
   "dependencies": {
     "@actions/core": "^1.8.1",
     "@actions/github": "^5.0.2",
-    "minargs": "^2.0.3"
+    "minargs": "^2.0.3",
+    "tunnel": "^0.0.6"
   }
 }
