@@ -67,7 +67,14 @@ const update = {
   check_run_id: { required: true },
 }
 
+const copy = {
+  owner,
+  repo,
+  run_id: { required: true },
+}
+
 module.exports = {
   create,
   update,
+  copy,
 }

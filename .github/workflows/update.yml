@@ -82,41 +82,13 @@ jobs:
         id: copy-runs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          FINAL_CONCLUSION=success
-          CHECKSUITE_ID=$(gh api /repos/{owner}/{repo}/actions/runs/${{ github.run_id }} --jq .check_suite_id)
-          echo "Getting check runs for suite $CHECKSUITE_ID..."
-
-          gh api /repos/{owner}/{repo}/check-suites/$CHECKSUITE_ID/check-runs \
-            --jq '.check_runs.[] | [.name, .status, .conclusion, .details_url, .started_at, .completed_at] | join("|")' \
-            | while read CHECK
-          do
-            NAME=${CHECK%%|*}
-            CHECK=${CHECK:${#NAME}+1}
-            STATUS=${CHECK%%|*}
-            CHECK=${CHECK:${#STATUS}+1}
-            CONCLUSION=${CHECK%%|*}
-            CHECK=${CHECK:${#CONCLUSION}+1}
-            DETAILS_URL=${CHECK%%|*}
-            CHECK=${CHECK:${#DETAILS_URL}+1}
-            STARTED_AT=${CHECK%%|*}
-            CHECK=${CHECK:${#STARTED_AT}+1}
-            COMPLETED_AT=$CHECK
-            if [[ "$STATUS" == "completed" ]]; then
-              [[ "$CONCLUSION" != "success" ]] && FINAL_CONCLUSION=failure
-              echo "Creating check run: $NAME..."
-              gh api /repos/{owner}/{repo}/check-runs \
-                -f name="$NAME" \
-                -f head_sha=${{ needs.update.outputs.commit-ref }} \
-                -f status=$STATUS \
-                -f conclusion=$CONCLUSION \
-                -f started_at=$STARTED_AT \
-                -f completed_at=$COMPLETED_AT \
-                -f output:'{"title": "'"$NAME"'", "summary": "'"$DETAILS_URL"'"}' \
-                --jq '{ id, name, status, conclusion, output }'
-            fi
-          done
-          echo "::set-output name=script-result::$FINAL_CONCLUSION"
+        uses: ./.github/workflows/steps/run-node-script
+        with:
+          path: ./.github/scripts
+          script: copy-check-runs
+          args: |
+            --repository=${{ github.repository }} \
+            --run_id=${{ github.run_id }}
       - name: Update pending check run
         uses: ./.github/workflows/steps/run-node-script
         env:

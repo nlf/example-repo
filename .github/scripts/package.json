@@ -5,6 +5,7 @@
   "scripts": {
     "create-check-run": "node bin/create-check-run.js",
     "update-check-run": "node bin/update-check-run.js",
+    "copy-check-runs": "node bin/copy-check-runs.js",
     "test": "tap"
   },
   "license": "ISC",
