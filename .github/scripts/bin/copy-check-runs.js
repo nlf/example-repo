@@ -43,6 +43,7 @@ const main = async () => {
       started_at: checkRun.started_at,
       completed_at: checkRun.completed_at,
       output: {
+        title: checkRun.name,
         summary: summarize(checkRun.details_url),
       },
     })
