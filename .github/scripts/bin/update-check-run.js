@@ -5,15 +5,14 @@ const core = require('@actions/core')
 const github = require('@actions/github')
 
 const { parse, validate } = require('../lib/args.js')
-const { create } = require('../lib/check-run.js')
+const { update } = require('../lib/check-run.js')
 
 const main = async () => {
-  const args = parse(create)
-  core.info(`Creating check run: ${args.name}`)
+  const args = parse(update)
+  core.info(`Updating check run: ${args.check_run_id}`)
   const octokit = github.getOctokit(process.env.GITHUB_TOKEN)
-  const checkRun = await octokit.rest.checks.create(args)
-  core.info(`Created check run: ${checkRun.data.id}`)
-  core.setOutput('script-result', checkRun.data.id)
+  await octokit.rest.checks.update(args)
+  core.info(`Updated check run: ${args.check_run_id}`)
 }
 
 main().catch((err) => {
@@ -26,3 +25,4 @@ main().catch((err) => {
   }
   process.exitCode = 1
 })
+

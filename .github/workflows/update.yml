@@ -78,7 +78,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Create check run
+      - name: Copy check runs
+        id: copy-runs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -115,9 +116,16 @@ jobs:
                 --jq '{ id, name, status, conclusion, output }'
             fi
           done
-          echo "${{ toJSON(needs.update) }}"
-          echo "Updating overall check run (id=${{ needs.update.outputs.check-id }})..."
-          gh api -X PATCH /repos/{owner}/{repo}/check-runs/${{ needs.update.outputs.check-id }} \
-            -f status=completed \
-            -f conclusion=$FINAL_CONCLUSION \
-            --jq '{ id, name, status, conclusion }'
+          echo "::set-output name=script-result::$FINAL_CONCLUSION"
+      - name: Update pending check run
+        uses: ./.github/workflows/steps/run-node-script
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          path: ./.github/scripts
+          script: update-check-run
+          args: |
+            --repository=${{ github.repository }} \
+            --check_run_id=${{ needs.update.outputs.check-id }} \
+            --status=completed \
+            --conclusion=${{ steps.copy-runs.outputs.script-result }}
