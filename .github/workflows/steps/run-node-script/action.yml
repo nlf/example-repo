@@ -21,7 +21,9 @@ runs:
         node-version: ${{ inputs.node-version }}
     - name: Install dependencies
       shell: bash
+      working-directory: ${{ inputs.path }}
       run: npm install --ignore-scripts --no-fund --no-audit
     - name: Run script
       shell: bash
+      working-directory: ${{ inputs.path }}
       run: npm run ${{ inputs.script }} -- ${{ inputs.args }}
