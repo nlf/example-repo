@@ -33,7 +33,7 @@ const main = async () => {
     }
 
     core.info(`Copying check run: ${checkRun.name}`)
-    const { data: thisRun } = await octokit.rest.checks.create({
+    await octokit.rest.checks.create({
       owner: args.owner,
       repo: args.repo,
       head_sha: args.head_sha,
@@ -43,21 +43,18 @@ const main = async () => {
       started_at: checkRun.started_at,
       completed_at: checkRun.completed_at,
       output: {
-        title: checkRun.name,
-        summary: checkRun.details_url,
+        summary: summarize(checkRun.details_url),
       },
-    })
-    await octokit.rest.checks.update({
-      owner: args.owner,
-      repo: args.repo,
-      check_run_id: thisRun.id,
-      details_url: checkRun.details_url,
     })
   }
 
   core.info(`Finished copying check runs, final result: ${scriptResult}`)
   core.setOutput('script-result', scriptResult)
 }
+
+const summarize = (url) => `This check is associated with a previous commit.
+
+For run logs, click here: ${url}`
 
 main().catch((err) => {
   if (err.status) {
