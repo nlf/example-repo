@@ -11,13 +11,13 @@ const main = async () => {
   const args = parse(copy)
   const octokit = github.getOctokit(process.env.GITHUB_TOKEN)
   core.info(`Getting check suite id for workflow run: ${args.run_id}`)
-  const { data: checkSuite } = await octokit.rest.actions.getWorkflowRun(args)
-  core.info(`Listing completed check runs for check suite: ${checkSuite.id}`)
+  const { data: workflowRun } = await octokit.rest.actions.getWorkflowRun(args)
+  core.info(`Listing completed check runs for check suite: ${workflowRun.check_suite_id}`)
   let scriptResult = 'success'
   const { data: checkRuns } = await octokit.rest.checks.listForSuite({
     owner: args.owner,
     repo: args.repo,
-    check_suite_id: checkSuite.id,
+    check_suite_id: workflowRun.check_suite_id,
     status: 'completed',
   })
   core.info(JSON.stringify(checkRuns))
