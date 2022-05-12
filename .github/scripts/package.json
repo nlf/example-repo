@@ -4,6 +4,7 @@
   "main": "lib/index.js",
   "scripts": {
     "create-check-run": "node bin/create-check-run.js",
+    "update-check-run": "node bin/update-check-run.js",
     "test": "tap"
   },
   "license": "ISC",
