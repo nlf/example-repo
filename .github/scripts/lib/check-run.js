@@ -71,6 +71,7 @@ const copy = {
   owner,
   repo,
   run_id: { required: true },
+  head_sha: { required: true },
 }
 
 module.exports = {

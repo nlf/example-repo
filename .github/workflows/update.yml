@@ -88,7 +88,8 @@ jobs:
           script: copy-check-runs
           args: |
             --repository=${{ github.repository }} \
-            --run_id=${{ github.run_id }}
+            --run_id=${{ github.run_id }} \
+            --head_sha=${{ needs.update.outputs.commit-ref }}
       - name: Update pending check run
         uses: ./.github/workflows/steps/run-node-script
         env:
