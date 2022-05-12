@@ -83,7 +83,7 @@ jobs:
         run: |
           FINAL_CONCLUSION=success
           CHECKSUITE_ID=$(gh api /repos/{owner}/{repo}/actions/runs/${{ github.run_id }} --jq .check_suite_id)
-          echo "Getting check-runs for suite $CHECKSUITE_ID"
+          echo "Getting check runs for suite $CHECKSUITE_ID..."
           gh api /repos/{owner}/{repo}/check-suites/$CHECKSUITE_ID/check-runs --jq '.check_runs.[] | [.name, .status, .conclusion, .details_url] | join("|")' | while read CHECK; do
             NAME=${CHECK%%|*}
             CHECK=${CHECK:${#NAME}+1}
@@ -92,8 +92,9 @@ jobs:
             CONCLUSION=${CHECK%%|*}
             CHECK=${CHECK:${#CONCLUSION}+1}
             DETAILS_URL=$CHECK
-            if [[ "$NAME" != "update" ]]; then
+            if [[ "$STATUS" == "completed" ]]; then
               [[ "$CONCLUSION" != "success" ]] && FINAL_CONCLUSION=failure
+              echo "Creating check run: $NAME..."
               gh api /repos/{owner}/{repo}/check-runs \
                 -f name="$NAME" \
                 -f head_sha=${{ needs.update.outputs.commit-ref }} \
@@ -103,7 +104,7 @@ jobs:
                 --jq '{ id, name, status, conclusion }'
             fi
           done
-          echo "Updating overall check run ${{ needs.update.outputs.check-id }} with conclusion: $FINAL_CONCLUSION"
+          echo "Updating overall check run..."
           gh api -X PATCH /repos/{owner}/{repo}/check-runs/${{ needs.update.outputs.check-id }} \
             -f status=completed \
             -f conclusion=$FINAL_CONCLUSION \
