@@ -1,5 +1,7 @@
 'use strict'
 
+const validate = require('./validate.js')
+
 const owner = {
   required: true,
   from: {

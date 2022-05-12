@@ -4,7 +4,7 @@
 const core = require('@actions/core')
 const github = require('@actions/github')
 
-const { parse, validate } = require('../lib/args.js')
+const { parse } = require('../lib/args.js')
 const { update } = require('../lib/check-run.js')
 
 const main = async () => {
