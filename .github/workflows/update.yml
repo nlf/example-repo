@@ -115,6 +115,7 @@ jobs:
                 --jq '{ id, name, status, conclusion, output }'
             fi
           done
+          echo "${{ toJSON(needs.update) }}"
           echo "Updating overall check run (id=${{ needs.update.outputs.check-id }})..."
           gh api -X PATCH /repos/{owner}/{repo}/check-runs/${{ needs.update.outputs.check-id }} \
             -f status=completed \
