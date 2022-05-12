@@ -32,6 +32,7 @@ const main = async () => {
       scriptResult = checkRun.conclusion
     }
 
+    core.info(`Copying check run: ${checkRun.name}`)
     await octokit.rest.checks.create({
       owner: args.owner,
       repo: args.repo,
@@ -41,10 +42,14 @@ const main = async () => {
       conclusion: checkRun.conclusion,
       started_at: checkRun.started_at,
       completed_at: checkRun.completed_at,
-      details_url: checkRun.details_url,
+      output: {
+        title: checkRun.name,
+        summary: checkRun.details_url,
+      },
     })
   }
 
+  core.info(`Finished copying check runs, final result: ${scriptResult}`)
   core.setOutput('script-result', scriptResult)
 }
 
