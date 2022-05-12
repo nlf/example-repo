@@ -13,9 +13,9 @@ inputs:
     description: Version of nodejs to install
     required: true
 outputs:
-  result:
+  script-result:
     description: Output from node script
-    value: ${{ steps.run.outputs.result }}
+    value: ${{ steps.run.outputs.script-result }}
 runs:
   using: composite
   steps:

@@ -13,7 +13,7 @@ jobs:
     outputs:
       has-changes: ${{ steps.status.outputs.has-changes }}
       commit-ref: ${{ steps.commit.outputs.commit-ref }}
-      check-id: ${{ steps.create-run.outputs.result }}
+      check-id: ${{ steps.create-run.outputs.script-result }}
     steps:
       - uses: actions/checkout@v3
       - name: Maybe make some changes
