@@ -40,20 +40,17 @@ jobs:
           git commit -m 'chore: add a test'
           git push
           echo "::set-output name=commit-ref::$(git rev-parse HEAD)"
-      - name: Create check runs on future commit
+      - name: Create check run for future commit
         id: create-runs
         if: steps.status.outputs.has-changes == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          CREATED_RUNS=""
-          CHECKSUITE_ID=$(gh api /repos/{owner}/{repo}/actions/runs/${{ github.run_id }} --jq .check_suite_id)
-          echo "Getting check-runs for suite $CHECKSUITE_ID"
-          gh api /repos/{owner}/{repo}/check-suites/$CHECKSUITE_ID/check-runs --jq '.check_runs.[].name' | while read CHECK; do
-            CHECK_ID=$(gh api /repos/{owner}/{repo}/check-runs -f name="$CHECK" -f head_sha=${{ steps.commit.outputs.commit-ref }} -f status=in_progress --jq '.id')
-            CREATED_RUNS="${CREATED_RUNS},${CHECK_ID}"
-          done
-          echo "::set-output name=created-runs::$CREATED_RUNS"
+          gh api /repos/{owner}/{repo}/check-runs \
+            -f external_id=post_mod_actions \
+            -f name="Running post-modification actions..." \
+            -f head_sha=${{ steps.commit.outputs.commit-ref }} \
+            -f status=in_progress
 
   lint:
     needs: update
@@ -85,15 +82,19 @@ jobs:
           echo "Runs that need updated: ${{ needs.update.outputs.created-runs }}"
           CHECKSUITE_ID=$(gh api /repos/{owner}/{repo}/actions/runs/${{ github.run_id }} --jq .check_suite_id)
           echo "Getting check-runs for suite $CHECKSUITE_ID"
-          gh api /repos/{owner}/{repo}/check-suites/$CHECKSUITE_ID/check-runs --jq '.check_runs.[] | [.id, .name, .status, .conclusion] | join("|")' | while read CHECK; do
+          gh api /repos/{owner}/{repo}/check-suites/$CHECKSUITE_ID/check-runs --jq '.check_runs.[] | [.id, .external_id, .name, .status, .conclusion] | join("|")' | while read CHECK; do
             ID=${CHECK%%|*}
             CHECK=${CHECK:${#ID}+1}
+            EXTERNAL_ID=${CHECK%%|*}
+            CHECK=${CHECK:${#EXTERNAL_ID}+1}
             NAME=${CHECK%%|*}
             CHECK=${CHECK:${#NAME}+1}
             STATUS=${CHECK%%|*}
             CHECK=${CHECK:${#STATUS}+1}
             CONCLUSION=$CHECK
-            if [[ "$STATUS" == "completed" ]]; then
+            if [[ "$ID" == "post_mod_actions" ]]; then
+              echo "Would update existing run ID=$ID EXTERNAL_ID=$EXTERNAL_ID NAME=$NAME"
+            else
               echo "Would create run for ID=$ID NAME=$NAME STATUS=$STATUS CONCLUSION=$CONCLUSION"
             fi
           done
