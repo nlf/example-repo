@@ -33,7 +33,7 @@ const main = async () => {
     }
 
     core.info(`Copying check run: ${checkRun.name}`)
-    await octokit.rest.checks.create({
+    const { data: thisRun } = await octokit.rest.checks.create({
       owner: args.owner,
       repo: args.repo,
       head_sha: args.head_sha,
@@ -46,6 +46,12 @@ const main = async () => {
         title: checkRun.name,
         summary: checkRun.details_url,
       },
+    })
+    await octokit.rest.checks.update({
+      owner: args.owner,
+      repo: args.repo,
+      check_run_id: thisRun.id,
+      details_url: checkRun.details_url,
     })
   }
 
