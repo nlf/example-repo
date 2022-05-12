@@ -103,6 +103,7 @@ jobs:
                 --jq '{ id, name, status, conclusion }'
             fi
           done
+          echo "Updating overall check run ${{ needs.update.outputs.check-id }} with conclusion: $FINAL_CONCLUSION"
           gh api -X PATCH /repos/{owner}/{repo}/check-runs/${{ needs.update.outputs.check-id }} \
             -f status=completed \
             -f conclusion=$FINAL_CONCLUSION \
