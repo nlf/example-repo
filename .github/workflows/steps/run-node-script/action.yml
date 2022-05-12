@@ -12,6 +12,10 @@ inputs:
   node-version:
     description: Version of nodejs to install
     required: true
+outputs:
+  result:
+    description: Output from node script
+    value: ${{ steps.run.outputs.result }}
 runs:
   using: composite
   steps:
@@ -24,6 +28,7 @@ runs:
       working-directory: ${{ inputs.path }}
       run: npm install --ignore-scripts --no-fund --no-audit
     - name: Run script
+      id: run
       shell: bash
       working-directory: ${{ inputs.path }}
       run: npm run ${{ inputs.script }} -- ${{ inputs.args }}

@@ -51,7 +51,7 @@ const main = async () => {
 
   const octokit = github.getOctokit(process.env.GITHUB_TOKEN)
   const checkRun = await octokit.rest.checks.create(args)
-  core.setOutput('check-id', checkRun.id)
+  core.setOutput('result', checkRun.id)
 }
 
 main().catch((err) => {
