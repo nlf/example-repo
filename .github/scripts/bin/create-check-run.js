@@ -1,7 +1,8 @@
 #!/usr/bin/env node
+const core = require('@actions/core')
+const github = require('@actions/github')
+
 const { parse, validate } = require('../lib/args.js')
-const { setOutput } = require('../lib/action.js')
-const octokit = require('../lib/octokit.js')
 
 const main = async () => {
   const args = parse({
@@ -48,8 +49,9 @@ const main = async () => {
     },
   })
 
+  const octokit = github.getOctokit(process.env.GITHUB_TOKEN)
   const checkRun = await octokit.rest.checks.create(args)
-  setOutput('check-id', checkRun.id)
+  core.setOutput('check-id', checkRun.id)
 }
 
 main().catch((err) => {

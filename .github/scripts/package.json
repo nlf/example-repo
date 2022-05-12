@@ -8,7 +8,8 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@octokit/rest": "^18.12.0",
+    "@actions/core": "^1.8.1",
+    "@actions/github": "^5.0.2",
     "minargs": "^2.0.3"
   }
 }
