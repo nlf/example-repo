@@ -12,10 +12,13 @@ jobs:
   install-nightly:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/github-script@v6
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Download Node nightly
+        uses: actions/github-script@v6
         with:
           script: |
-            const localDir = `${process.env.HOME}/.local`
+            const localDir = `${process.env.RUNNER_TEMP}/nodejs`
             await io.mkdirP(localDir)
 
             // find the version of the latest nightly
@@ -25,17 +28,42 @@ jobs:
             const { version } = availableNightlies[0]
             core.endGroup()
 
-            // download the tarball release
-            core.startGroup(`installing nodejs ${version}`)
-            const filename = `node-${version}-linux-x64.tar.xz`
+            // download the source tarball
+            core.startGroup(`downloading nodejs ${version}`)
+            const filename = `node-${version}.tar.xz`
             const target = `${localDir}/${filename}`
             await exec.exec('curl', ['-o', target, `https://nodejs.org/download/nightly/${version}/${filename}`])
-
-            // extract the release
-            await exec.exec('tar', ['xf', target, '--strip=1', '-C', localDir])
             core.endGroup()
 
-            // and add it to the path
-            core.addPath(`${localDir}/bin`)
-      - run: npm i -g npm@npm/cli#latest
-      - run: npm test
+            // extract the source
+            core.startGroup('extracting source')
+            await exec.exec('tar', ['xf', target, '--strip=1', '-C', localDir])
+            core.endGroup()
+      - name: Update bundled npm
+        uses: actions/github-script@v6
+        with:
+          script: |
+            core.startGroup('packing an npm tarball')
+            let filename = ''
+            await exec.exec('npm', ['pack', '--loglevel=silent'], {
+              listeners: {
+                stdout: (data) => {
+                  filename += data
+                },
+              },
+            })
+            filename = filename.trim()
+            core.endGroup()
+
+            const localDir = `${process.env.RUNNER_TEMP}/nodejs`
+
+            core.startGroup('removing old npm')
+            await io.rmRF(`${localDir}/deps/npm`)
+            await io.mkdirP(`${localDir}/deps/npm`)
+            core.endGroup()
+
+            core.startGroup('updating to new npm')
+            await exec.exec('tar', ['xf', filename, '-C', `${localDir}/deps/npm`, '--strip=1'])
+            core.endGroup()
+      - name: Test
+        run: make test
