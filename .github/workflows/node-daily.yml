@@ -63,10 +63,33 @@ jobs:
             core.endGroup()
 
             core.startGroup('updating to new npm')
-            await exec.exec('tar', ['xf', filename, '-C', `${localDir}/deps/npm`, '--strip=1'])
+            await exec.exec('tar', ['xf', filename, '-C', `${localDir}/deps/npm/`, '--strip=1'])
             core.endGroup()
       - name: Test
         run: |
           cd "${RUNNER_TEMP}/nodejs"
           ./configure
-          make test-only
+          make -j4 test-only
+      - name: Install nightly nodejs build
+        run: |
+          cd "${RUNNER_TEMP}/nodejs"
+          make install
+      - name: Install citgm
+        run: |
+          npm i -g citgm
+  citgm:
+    needs: install-nightly
+    runs-on: ubuntu-latest
+    steps:
+      - name: Node version
+        run: |
+          node --version
+      - name: npm version
+        run: |
+          npm --version
+      - name: Install citgm
+        run: |
+          npm i -g citgm
+      - name: Run citgm
+        run: |
+          citgm "@hapi/hapi" --tap
