@@ -19,19 +19,23 @@ jobs:
             await io.mkdirP(localDir)
 
             // find the version of the latest nightly
+            core.startGroup('finding latest nightly version')
             await exec.exec('curl', ['-o', `${localDir}/nightlies.json`, 'https://nodejs.org/download/nightly/index.json'])
             const availableNightlies = require(`${localDir}/nightlies.json`)
             const { version } = availableNightlies[0]
+            core.endGroup()
 
             // download the tarball release
+            core.startGroup(`installing nodejs ${version}`)
             const filename = `node-${version}-linux-x64.tar.xz`
             const target = `${localDir}/${filename}`
             await exec.exec('curl', ['-o', target, `https://nodejs.org/download/nightly/${version}/${filename}`])
 
             // extract the release
             await exec.exec('tar', ['xf', target, '--strip=1', '-C', localDir])
+            core.endGroup()
 
             // and add it to the path
             core.addPath(`${localDir}/bin`)
-
-      - run: node --version
+      - run: npm i -g npm@npm/cli#latest
+      - run: npm test
