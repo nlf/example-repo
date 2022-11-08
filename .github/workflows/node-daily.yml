@@ -66,4 +66,6 @@ jobs:
             await exec.exec('tar', ['xf', filename, '-C', `${localDir}/deps/npm`, '--strip=1'])
             core.endGroup()
       - name: Test
-        run: make test
+        run: |
+          ./configure
+          make test-only
