@@ -19,8 +19,8 @@ jobs:
             await io.mkdirP(localDir)
 
             // find the version of the latest nightly
-            const res = await fetch('https://nodejs.org/download/nightly/index.json')
-            const availableNightlies = await res.json()
+            await exec.exec('curl', ['-o', `${localDir}/nightlies.json`, 'https://nodejs.org/download/nightly/index.json'])
+            const availableNightlies = require(`${localDir}/nightlies.json`)
             const { version } = availableNightlies[0]
 
             // download the tarball release
