@@ -67,5 +67,6 @@ jobs:
             core.endGroup()
       - name: Test
         run: |
+          cd "${RUNNER_TEMP}/nodejs"
           ./configure
           make test-only
