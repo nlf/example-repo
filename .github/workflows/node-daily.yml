@@ -79,7 +79,7 @@ jobs:
       - name: Test
         run: |
           cd "${RUNNER_TEMP}/nodejs"
-          ./configure
+          ./configure --prefix="${RUNNER_TEMP}/node"
           make -j4 test-only
       - name: Install nightly nodejs build
         run: |
@@ -89,6 +89,11 @@ jobs:
     needs: install-nightly
     runs-on: ubuntu-latest
     steps:
+      - name: Add nightly nodejs to path
+        uses: actions/github-script@v6
+        with:
+          script: |
+            core.addPath(`${process.env.RUNNER_TEMP}/node/bin`)
       - name: Node version
         run: |
           node --version
