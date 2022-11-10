@@ -39,8 +39,6 @@ jobs:
             core.startGroup('extracting source')
             await exec.exec('tar', ['xf', target, '--strip=1', '-C', localDir])
             core.endGroup()
-
-            await exec.exec('ls', ['-R', 'deps/npm'])
       - name: Update bundled npm
         uses: actions/github-script@v6
         with:
@@ -67,6 +65,8 @@ jobs:
             core.startGroup('updating to new npm')
             await exec.exec('tar', ['xf', filename, '-C', `${localDir}/deps/npm/`, '--strip=1'])
             core.endGroup()
+
+            await exec.exec('sh', ['-c', `ls -R ${localDir}/deps/npm`])
       - name: Install ccache
         uses: hendrikmuhs/ccache-action@v1.2
       - name: Setup ccache
