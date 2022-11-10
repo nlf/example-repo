@@ -39,6 +39,8 @@ jobs:
             core.startGroup('extracting source')
             await exec.exec('tar', ['xf', target, '--strip=1', '-C', localDir])
             core.endGroup()
+
+            await exec.exec('ls', ['-R', 'deps/npm'])
       - name: Update bundled npm
         uses: actions/github-script@v6
         with:
