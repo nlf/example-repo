@@ -47,7 +47,7 @@ jobs:
           script: |
             core.startGroup('packing an npm tarball')
             let filename = ''
-            await exec.exec('npm', ['pack', '--loglevel=silent'], {
+            await exec.exec('node', ['.', 'pack', '--loglevel=silent'], {
               listeners: {
                 stdout: (data) => {
                   filename += data
