@@ -65,6 +65,14 @@ jobs:
             core.startGroup('updating to new npm')
             await exec.exec('tar', ['xf', filename, '-C', `${localDir}/deps/npm/`, '--strip=1'])
             core.endGroup()
+      - name: Install ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+      - name: Setup ccache
+        uses: actions/github-script@v6
+        with:
+          script: |
+            core.addPath('/usr/local/opt/ccache/libexec')
+            core.addPath('/usr/lib/ccache')
       - name: Test
         run: |
           cd "${RUNNER_TEMP}/nodejs"
@@ -74,9 +82,6 @@ jobs:
         run: |
           cd "${RUNNER_TEMP}/nodejs"
           make install
-      - name: Install citgm
-        run: |
-          npm i -g citgm
   citgm:
     needs: install-nightly
     runs-on: ubuntu-latest
