@@ -63,10 +63,8 @@ jobs:
             core.endGroup()
 
             core.startGroup('updating to new npm')
-            await exec.exec('tar', ['xf', filename, '-C', `${localDir}/deps/npm/`, '--strip=1'])
+            await exec.exec('tar', ['xvf', filename, '-C', `${localDir}/deps/npm/`, '--strip=1'])
             core.endGroup()
-
-            await exec.exec('sh', ['-c', `ls -R ${localDir}/deps/npm`])
       - name: Install ccache
         uses: hendrikmuhs/ccache-action@v1.2
       - name: Setup ccache
