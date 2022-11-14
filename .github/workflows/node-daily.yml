@@ -101,4 +101,4 @@ jobs:
           npm i -g citgm
       - name: Run citgm
         run: |
-          citgm-all --markdown
+          citgm-all --tap --nodedir "${RUNNER_TEMP}/nodejs"
