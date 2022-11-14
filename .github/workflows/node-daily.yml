@@ -85,10 +85,6 @@ jobs:
         run: |
           cd "${RUNNER_TEMP}/nodejs"
           make install
-  citgm:
-    needs: install-nightly
-    runs-on: ubuntu-latest
-    steps:
       - name: Add nightly nodejs to path
         uses: actions/github-script@v6
         with:
