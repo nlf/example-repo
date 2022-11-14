@@ -101,4 +101,4 @@ jobs:
           npm i -g citgm
       - name: Run citgm
         run: |
-          citgm "@hapi/hapi" --tap
+          citgm-all --markdown
