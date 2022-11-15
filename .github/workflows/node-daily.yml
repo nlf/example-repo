@@ -101,4 +101,5 @@ jobs:
           npm i -g citgm
       - name: Run citgm
         run: |
-          citgm-all --tap --nodedir "${RUNNER_TEMP}/nodejs" --excludeTags yarn --customTest 'npm ls'
+          echo 'require("child_process").execSync("npm ls")' > "${RUNNER_TEMP}/npm-ls.js"
+          citgm-all --tap --nodedir "${RUNNER_TEMP}/nodejs" --excludeTags yarn --customTest "${RUNNER_TEMP}/npm-ls.js"
