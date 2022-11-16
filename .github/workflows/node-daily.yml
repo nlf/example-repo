@@ -14,15 +14,18 @@ jobs:
           repository: 'npm/cli'
       - name: Install ccache
         uses: hendrikmuhs/ccache-action@v1.2
+      - name: Configure ccache
+        uses: actions/github-script@v6
+        with:
+          script: |
+            // add ccache to the path, this must be done in its own step
+            core.addPath('/usr/local/opt/ccache/libexec')
+            core.addPath('/usr/lib/ccache')
       - name: Build nodejs nightly
         uses: actions/github-script@v6
         id: build-nightly
         with:
           script: |
-            // add ccache to the path
-            core.addPath('/usr/local/opt/ccache/libexec')
-            core.addPath('/usr/lib/ccache')
-
             // setup some common vars
             const tmpDir = process.env.RUNNER_TEMP
             const sourceDir = `${tmpDir}/src`
