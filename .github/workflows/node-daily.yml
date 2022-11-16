@@ -8,11 +8,11 @@ jobs:
     outputs:
       version: ${{ steps.download-nightly.outputs.version }}
     steps:
-      - name: Checkout
+      - name: Checkout npm/cli
         uses: actions/checkout@v3
         with:
           repository: 'npm/cli'
-      - name: Download Node nightly
+      - name: Download nodejs nightly
         uses: actions/github-script@v6
         id: download-nightly
         with:
@@ -21,29 +21,22 @@ jobs:
             await io.mkdirP(localDir)
 
             // find the version of the latest nightly
-            core.startGroup('finding latest nightly version')
             await exec.exec('curl', ['-o', `${localDir}/nightlies.json`, 'https://nodejs.org/download/nightly/index.json'])
             const availableNightlies = require(`${localDir}/nightlies.json`)
             const { version } = availableNightlies[0]
             core.setOutput('version', version)
-            core.endGroup()
 
             // download the source tarball
-            core.startGroup(`downloading nodejs ${version}`)
             const filename = `node-${version}.tar.xz`
             const target = `${localDir}/${filename}`
             await exec.exec('curl', ['-o', target, `https://nodejs.org/download/nightly/${version}/${filename}`])
-            core.endGroup()
 
             // extract the source
-            core.startGroup('extracting source')
             await exec.exec('tar', ['xf', target, '--strip=1', '-C', localDir])
-            core.endGroup()
       - name: Update bundled npm
         uses: actions/github-script@v6
         with:
           script: |
-            core.startGroup('packing an npm tarball')
             let filename = ''
             await exec.exec('node', ['.', 'run', 'resetdeps'])
             await exec.exec('node', ['.', 'pack', '--loglevel=silent'], {
@@ -53,44 +46,53 @@ jobs:
                 },
               },
             })
-            filename = filename.trim().split(/\n/g).find((item) => item.startsWith('npm-') && item.endsWith('.tgz'))
-            core.endGroup()
+
+            filename = filename
+              .trim()
+              .split(/\n/g)
+              .find((item) => {
+                return item.startsWith('npm-') && item.endsWith('.tgz')
+              })
 
             const localDir = `${process.env.RUNNER_TEMP}/nodejs`
 
-            core.startGroup('removing old npm')
             await io.rmRF(`${localDir}/deps/npm`)
             await io.mkdirP(`${localDir}/deps/npm`)
-            core.endGroup()
 
-            core.startGroup('updating to new npm')
             await exec.exec('tar', ['xf', filename, '-C', `${localDir}/deps/npm/`, '--strip=1'])
-            core.endGroup()
       - name: Install ccache
         uses: hendrikmuhs/ccache-action@v1.2
-      - name: Setup ccache
+      - name: Run nodejs tests
         uses: actions/github-script@v6
         with:
           script: |
+            // first, put ccache at the front of the path
             core.addPath('/usr/local/opt/ccache/libexec')
             core.addPath('/usr/lib/ccache')
-      - name: Test
-        run: |
-          cd "${RUNNER_TEMP}/nodejs"
-          ./configure --prefix="${RUNNER_TEMP}/node"
-          make -j4 test-only
-      - name: Install nightly nodejs build
-        run: |
-          cd "${RUNNER_TEMP}/nodejs"
-          make install
+
+            const sourceDir = `${process.env.RUNNER_TEMP}/nodejs`
+            const targetDir = `${process.env.RUNNER_TEMP}/node`
+
+            await exec.exec(`./configure --prefix="${targetDir}/node"`, { cwd: sourceDir })
+            await exec.exec('make -j4 test-only')
       - name: Generate nodejs artifact
-        run: |
-          tar cfz -C "${RUNNER_TEMP}/nodejs" "${RUNNER_TEMP}/node-nightly.tgz"
+        id: generate-artifact
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const sourceDir = `${process.env.RUNNER_TEMP}/nodejs`
+            const targetDir = `${process.env.RUNNER_TEMP}/node`
+            const targetFile = `${targetDir}.tgz`
+
+            await exec.exec('make install', { cwd: sourceDir })
+            await exec.exec(`tar cfz "${targetFile}" -C "${targetDir}" "*"`)
+
+            core.setOutput('artifact', targetFile)
       - name: Upload nodejs artifact
         uses: actions/upload-artifact@v3
         with:
           name: nodejs-nightly-${{ steps.download-nightly.outputs.version }}
-          path: "${RUNNER_TEMP}/node-nightly.tgz"
+          path: ${{ steps.generate-artifact.outputs.artifact }}
       # - name: Add nightly nodejs to path
       #   uses: actions/github-script@v6
       #   with:
