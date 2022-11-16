@@ -12,81 +12,69 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: 'npm/cli'
-      - name: Download nodejs nightly
+      - name: Install ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+      - name: Build nodejs nightly
         uses: actions/github-script@v6
-        id: download-nightly
+        id: build-nightly
         with:
           script: |
-            const localDir = `${process.env.RUNNER_TEMP}/nodejs`
-            await io.mkdirP(localDir)
+            // add ccache to the path
+            core.addPath('/usr/local/opt/ccache/libexec')
+            core.addPath('/usr/lib/ccache')
+
+            // setup some common vars
+            const tmpDir = process.env.RUNNER_TEMP
+            const sourceDir = `${tmpDir}/src`
+            const targetDir = `${tmpDir}/build`
+            const targetFile = `${targetDir}.tgz`
 
             // find the version of the latest nightly
-            await exec.exec('curl', ['-o', `${localDir}/nightlies.json`, 'https://nodejs.org/download/nightly/index.json'])
-            const availableNightlies = require(`${localDir}/nightlies.json`)
+            await exec.exec('curl', ['-o', `${tmpDir}/nightlies.json`, 'https://nodejs.org/download/nightly/index.json'])
+            const availableNightlies = require(`${tmpDir}/nightlies.json`)
             const { version } = availableNightlies[0]
             core.setOutput('version', version)
 
             // download the source tarball
             const filename = `node-${version}.tar.xz`
-            const target = `${localDir}/${filename}`
+            const target = `${tmpDir}/${filename}`
             await exec.exec('curl', ['-o', target, `https://nodejs.org/download/nightly/${version}/${filename}`])
 
             // extract the source
-            await exec.exec('tar', ['xf', target, '--strip=1', '-C', localDir])
-      - name: Update bundled npm
-        uses: actions/github-script@v6
-        with:
-          script: |
-            let filename = ''
+            await exec.exec('tar', ['xf', target, '--strip=1', '-C', sourceDir])
+
+            // update the bundled npm
             await exec.exec('node', ['.', 'run', 'resetdeps'])
+
+            let npmTarball = ''
             await exec.exec('node', ['.', 'pack', '--loglevel=silent'], {
               listeners: {
                 stdout: (data) => {
-                  filename += data
+                  npmTarball += data
                 },
               },
             })
-
-            filename = filename
+            npmTarball = npmTarball
               .trim()
               .split(/\n/g)
               .find((item) => {
                 return item.startsWith('npm-') && item.endsWith('.tgz')
               })
 
-            const localDir = `${process.env.RUNNER_TEMP}/nodejs`
+            await io.rmRF(`${sourceDir}/deps/npm`)
+            await io.mkdirP(`${sourceDir}/deps/npm`)
 
-            await io.rmRF(`${localDir}/deps/npm`)
-            await io.mkdirP(`${localDir}/deps/npm`)
+            await exec.exec('tar', ['xf', filename, '-C', `${sourceDir}/deps/npm/`, '--strip=1'])
 
-            await exec.exec('tar', ['xf', filename, '-C', `${localDir}/deps/npm/`, '--strip=1'])
-      - name: Install ccache
-        uses: hendrikmuhs/ccache-action@v1.2
-      - name: Run nodejs tests
-        uses: actions/github-script@v6
-        with:
-          script: |
-            // first, put ccache at the front of the path
-            core.addPath('/usr/local/opt/ccache/libexec')
-            core.addPath('/usr/lib/ccache')
+            // configure the source directory
+            await exec.exec('./configure', ['--prefix', targetDir], { cwd: sourceDir })
 
-            const sourceDir = `${process.env.RUNNER_TEMP}/nodejs`
-            const targetDir = `${process.env.RUNNER_TEMP}/node`
-
-            await exec.exec('./configure', [`--prefix="${targetDir}"`], { cwd: sourceDir })
+            // run tests
             await exec.exec('make', ['-j4', 'test-only'], { cwd: sourceDir })
-      - name: Generate nodejs artifact
-        id: generate-artifact
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const sourceDir = `${process.env.RUNNER_TEMP}/nodejs`
-            const targetDir = `${process.env.RUNNER_TEMP}/node`
-            const targetFile = `${targetDir}.tgz`
 
+            // generate build artifact
             await exec.exec('make', ['install'], { cwd: sourceDir })
             await exec.exec(`tar', ['cfz', targetFile, '-C', targetDir, '*'])
-
             core.setOutput('artifact', targetFile)
       - name: Upload nodejs artifact
         uses: actions/upload-artifact@v3
