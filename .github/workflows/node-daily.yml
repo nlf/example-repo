@@ -6,7 +6,8 @@ jobs:
   build-nightly:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.download-nightly.outputs.version }}
+      artifact: ${{ steps.build-nightly.outputs.artifact }}
+      version: ${{ steps.build-nightly.outputs.version }}
     steps:
       - name: Checkout npm/cli
         uses: actions/checkout@v3
@@ -14,18 +15,15 @@ jobs:
           repository: 'npm/cli'
       - name: Install ccache
         uses: hendrikmuhs/ccache-action@v1.2
-      - name: Configure ccache
-        uses: actions/github-script@v6
-        with:
-          script: |
-            // add ccache to the path, this must be done in its own step
-            core.addPath('/usr/local/opt/ccache/libexec')
-            core.addPath('/usr/lib/ccache')
       - name: Build nodejs nightly
         uses: actions/github-script@v6
         id: build-nightly
         with:
           script: |
+            // add ccache to the path
+            core.addPath('/usr/local/opt/ccache/libexec')
+            core.addPath('/usr/lib/ccache')
+
             // setup some common vars
             const tmpDir = process.env.RUNNER_TEMP
             const sourceDir = `${tmpDir}/src`
@@ -39,13 +37,11 @@ jobs:
             core.setOutput('version', version)
 
             // download the source tarball
-            const filename = `node-${version}.tar.xz`
-            const target = `${tmpDir}/${filename}`
-            await exec.exec('curl', ['-o', target, `https://nodejs.org/download/nightly/${version}/${filename}`])
+            await exec.exec('curl', ['-o', `${tmpDir}/node-${version}.tar.xz`, `https://nodejs.org/download/nightly/${version}/node-${version}.tar.xz`])
 
             // extract the source
             await io.mkdirP(sourceDir)
-            await exec.exec('tar', ['xf', target, '--strip=1', '-C', sourceDir])
+            await exec.exec('tar', ['xf', `${tmpDir}/node-${version}.tar.xz`, '--strip=1', '-C', sourceDir])
 
             // update the bundled npm
             await exec.exec('node', ['.', 'run', 'resetdeps'])
@@ -83,8 +79,8 @@ jobs:
       - name: Upload nodejs artifact
         uses: actions/upload-artifact@v3
         with:
-          name: nodejs-nightly-${{ steps.download-nightly.outputs.version }}
-          path: ${{ steps.generate-artifact.outputs.artifact }}
+          name: nodejs-nightly-${{ steps.build-nightly.outputs.version }}
+          path: ${{ steps.build-nightly.outputs.artifact }}
       # - name: Add nightly nodejs to path
       #   uses: actions/github-script@v6
       #   with:
