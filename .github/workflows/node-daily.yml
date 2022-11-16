@@ -74,7 +74,7 @@ jobs:
 
             // generate build artifact
             await exec.exec('make', ['install'], { cwd: sourceDir })
-            await exec.exec(`tar', ['cfz', targetFile, '-C', targetDir, '*'])
+            await exec.exec('tar', ['cfz', targetFile, '-C', targetDir, '*'])
             core.setOutput('artifact', targetFile)
       - name: Upload nodejs artifact
         uses: actions/upload-artifact@v3
