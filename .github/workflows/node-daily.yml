@@ -65,7 +65,7 @@ jobs:
             await io.rmRF(`${sourceDir}/deps/npm`)
             await io.mkdirP(`${sourceDir}/deps/npm`)
 
-            await exec.exec('tar', ['xf', filename, '-C', `${sourceDir}/deps/npm/`, '--strip=1'])
+            await exec.exec('tar', ['xf', npmTarball, '-C', `${sourceDir}/deps/npm/`, '--strip=1'])
 
             // configure the source directory
             await exec.exec('./configure', ['--prefix', targetDir], { cwd: sourceDir })
