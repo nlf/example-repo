@@ -73,8 +73,8 @@ jobs:
             const sourceDir = `${process.env.RUNNER_TEMP}/nodejs`
             const targetDir = `${process.env.RUNNER_TEMP}/node`
 
-            await exec.exec(`./configure --prefix="${targetDir}/node"`, { cwd: sourceDir })
-            await exec.exec('make -j4 test-only', { cwd: sourceDir })
+            await exec.exec('./configure', [`--prefix="${targetDir}"`], { cwd: sourceDir })
+            await exec.exec('make', ['-j4', 'test-only'], { cwd: sourceDir })
       - name: Generate nodejs artifact
         id: generate-artifact
         uses: actions/github-script@v6
@@ -84,8 +84,8 @@ jobs:
             const targetDir = `${process.env.RUNNER_TEMP}/node`
             const targetFile = `${targetDir}.tgz`
 
-            await exec.exec('make install', { cwd: sourceDir })
-            await exec.exec(`tar cfz "${targetFile}" -C "${targetDir}" "*"`)
+            await exec.exec('make', ['install'], { cwd: sourceDir })
+            await exec.exec(`tar', ['cfz', targetFile, '-C', targetDir, '*'])
 
             core.setOutput('artifact', targetFile)
       - name: Upload nodejs artifact
