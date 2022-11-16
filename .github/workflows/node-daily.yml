@@ -41,6 +41,7 @@ jobs:
             await exec.exec('curl', ['-o', target, `https://nodejs.org/download/nightly/${version}/${filename}`])
 
             // extract the source
+            await io.mkdirP(sourceDir)
             await exec.exec('tar', ['xf', target, '--strip=1', '-C', sourceDir])
 
             // update the bundled npm
