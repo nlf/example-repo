@@ -1,16 +1,12 @@
 name: nightly nodejs ci
 on:
   workflow_dispatch:
-  release:
-    types:
-      - published
-  schedule:
-    # "At 23:00 UTC" https://crontab.guru/#0_23_*_*_*
-    - cron: '0 23 * * *'
 
 jobs:
-  install-nightly:
+  build-nightly:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.download-nightly.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -18,6 +14,7 @@ jobs:
           repository: 'npm/cli'
       - name: Download Node nightly
         uses: actions/github-script@v6
+        id: download-nightly
         with:
           script: |
             const localDir = `${process.env.RUNNER_TEMP}/nodejs`
@@ -28,6 +25,7 @@ jobs:
             await exec.exec('curl', ['-o', `${localDir}/nightlies.json`, 'https://nodejs.org/download/nightly/index.json'])
             const availableNightlies = require(`${localDir}/nightlies.json`)
             const { version } = availableNightlies[0]
+            core.setOutput('version', version)
             core.endGroup()
 
             // download the source tarball
@@ -85,30 +83,38 @@ jobs:
         run: |
           cd "${RUNNER_TEMP}/nodejs"
           make install
-      - name: Add nightly nodejs to path
-        uses: actions/github-script@v6
+      - name: Generate nodejs artifact
+        run: |
+          tar -C "${RUNNER_TEMP}/nodejs" cfz "${RUNNER_TEMP}/node-nightly.tgz"
+      - name: Upload nodejs artifact
+        uses: actions/upload-artifact@v3
         with:
-          script: |
-            core.addPath(`${process.env.RUNNER_TEMP}/node/bin`)
-      - name: Node version
-        run: |
-          node --version
-      - name: npm version
-        run: |
-          npm --version
-      - name: Find npm cache directory
-        id: npm-cache
-        run: |
-          echo "::set-output name=dir::$(npm config get cache)"
-      - name: Setup npm cache
-        uses: actions/cache@v3
-        with:
-          path: ${{ steps.npm-cache.outputs.dir }}
-          key: "npm-cache"
-      - name: Install citgm
-        run: |
-          npm i -g citgm
-      - name: Run citgm
-        run: |
-          echo 'require("child_process").execSync("npm ls")' > "${RUNNER_TEMP}/npm-ls.js"
-          citgm-all --markdown --nodedir "${RUNNER_TEMP}/nodejs" --excludeTags yarn --customTest "${RUNNER_TEMP}/npm-ls.js"
+          name: nodejs-nightly-${{ steps.download-nightly.outputs.version }}
+          path: "${RUNNER_TEMP}/node-nightly.tgz"
+      # - name: Add nightly nodejs to path
+      #   uses: actions/github-script@v6
+      #   with:
+      #     script: |
+      #       core.addPath(`${process.env.RUNNER_TEMP}/node/bin`)
+      # - name: Node version
+      #   run: |
+      #     node --version
+      # - name: npm version
+      #   run: |
+      #     npm --version
+      # - name: Find npm cache directory
+      #   id: npm-cache
+      #   run: |
+      #     echo "::set-output name=dir::$(npm config get cache)"
+      # - name: Setup npm cache
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: ${{ steps.npm-cache.outputs.dir }}
+      #     key: "npm-cache"
+      # - name: Install citgm
+      #   run: |
+      #     npm i -g citgm
+      # - name: Run citgm
+      #   run: |
+      #     echo 'require("child_process").execSync("npm ls")' > "${RUNNER_TEMP}/npm-ls.js"
+      #     citgm-all --markdown --nodedir "${RUNNER_TEMP}/nodejs" --excludeTags yarn --customTest "${RUNNER_TEMP}/npm-ls.js"
