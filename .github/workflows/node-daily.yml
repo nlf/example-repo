@@ -85,7 +85,7 @@ jobs:
           make install
       - name: Generate nodejs artifact
         run: |
-          tar -C "${RUNNER_TEMP}/nodejs" cfz "${RUNNER_TEMP}/node-nightly.tgz"
+          tar cfz -C "${RUNNER_TEMP}/nodejs" "${RUNNER_TEMP}/node-nightly.tgz"
       - name: Upload nodejs artifact
         uses: actions/upload-artifact@v3
         with:
