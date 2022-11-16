@@ -74,7 +74,7 @@ jobs:
             const targetDir = `${process.env.RUNNER_TEMP}/node`
 
             await exec.exec(`./configure --prefix="${targetDir}/node"`, { cwd: sourceDir })
-            await exec.exec('make -j4 test-only')
+            await exec.exec('make -j4 test-only', { cwd: sourceDir })
       - name: Generate nodejs artifact
         id: generate-artifact
         uses: actions/github-script@v6
