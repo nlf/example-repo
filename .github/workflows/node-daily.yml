@@ -96,7 +96,7 @@ jobs:
   fetch-lookup:
     runs-on: ubuntu-latest
     outputs:
-      lookup: ${{ steps.fetch-lookup.outputs.lookup }}
+      packages: ${{ steps.fetch-lookup.outputs.packages }}
     steps:
       - name: Fetch lookup table
         id: fetch-lookup
@@ -113,33 +113,40 @@ jobs:
                 },
               },
             })
+            lookup = JSON.parse(lookup)
 
-            core.setOutput('lookup', lookup)
+            const packages = Object.keys(lookup).filter((name) => {
+              const item = lookup[name]
+              if (item.skip === true) {
+                return false
+              }
+              // TODO expand this to skip more things
 
-      # - name: Add nightly nodejs to path
-      #   uses: actions/github-script@v6
-      #   with:
-      #     script: |
-      #       core.addPath(`${process.env.RUNNER_TEMP}/node/bin`)
-      # - name: Node version
-      #   run: |
-      #     node --version
-      # - name: npm version
-      #   run: |
-      #     npm --version
-      # - name: Find npm cache directory
-      #   id: npm-cache
-      #   run: |
-      #     echo "::set-output name=dir::$(npm config get cache)"
-      # - name: Setup npm cache
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: ${{ steps.npm-cache.outputs.dir }}
-      #     key: "npm-cache"
-      # - name: Install citgm
-      #   run: |
-      #     npm i -g citgm
-      # - name: Run citgm
-      #   run: |
-      #     echo 'require("child_process").execSync("npm ls")' > "${RUNNER_TEMP}/npm-ls.js"
-      #     citgm-all --markdown --nodedir "${RUNNER_TEMP}/nodejs" --excludeTags yarn --customTest "${RUNNER_TEMP}/npm-ls.js"
+              return true
+            })
+            core.setOutput('packages', packages)
+  citgm:
+    runs-on: ubuntu-latest
+    needs:
+      - build-nightly
+      - fetch-lookup
+    strategy:
+      matrix:
+        package: ${{ fromJson(needs.fetch-lookup.outputs.packages }}
+    steps:
+      - name: Fetch nightly nodejs build artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ needs.build-nightly.outputs.artifact }}
+      - name: Install nightly nodejs build ${{ needs.build-nightly.outputs.version }}
+        uses: actions/github-script@v6
+        with:
+          script: |
+            core.startGroup('extracting artifact')
+            await io.mkdirP(`${process.cwd()}/node`)
+            await exec.exec('tar', ['xf', ${{ needs.build-nightly.outputs.artifact }}, '-C', './node'])
+            core.endGroup()
+
+            core.addPath(`${process.cwd()}/node/bin`)
+      - run: node --version
+      - run: npm --version
