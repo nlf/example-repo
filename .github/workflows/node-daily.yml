@@ -132,7 +132,7 @@ jobs:
       - fetch-lookup
     strategy:
       matrix:
-        package: ${{ fromJson(needs.fetch-lookup.outputs.packages }}
+        package: ${{ fromJson(needs.fetch-lookup.outputs.packages) }}
     steps:
       - name: Fetch nightly nodejs build artifact
         uses: actions/download-artifact@v3
