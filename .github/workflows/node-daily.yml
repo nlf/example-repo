@@ -93,6 +93,29 @@ jobs:
         with:
           name: nodejs-nightly-${{ steps.build-nightly.outputs.version }}
           path: ${{ steps.build-nightly.outputs.artifact }}
+  fetch-lookup:
+    runs-on: ubuntu-latest
+    outputs:
+      lookup: ${{ steps.fetch-lookup.outputs.lookup }}
+    steps:
+      - name: Fetch lookup table
+        id: fetch-lookup
+        uses: actions/github-script@v6
+        with:
+          script: |
+            await exec.exec('npm', ['install', 'citgm'])
+
+            let lookup = ''
+            await exec.exec('cat', ['node_modules/citgm/lib/lookup.json'], {
+              listeners: {
+                stdout: (data) => {
+                  lookup += data
+                },
+              },
+            })
+
+            core.setOutput('lookup', lookup)
+
       # - name: Add nightly nodejs to path
       #   uses: actions/github-script@v6
       #   with:
