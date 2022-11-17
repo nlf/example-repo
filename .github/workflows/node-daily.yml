@@ -31,19 +31,24 @@ jobs:
             const targetFile = `${targetDir}.tgz`
 
             // find the version of the latest nightly
+            core.startGroup('finding version of latest nightly nodejs')
             await exec.exec('curl', ['-o', `${tmpDir}/nightlies.json`, 'https://nodejs.org/download/nightly/index.json'])
             const availableNightlies = require(`${tmpDir}/nightlies.json`)
             const { version } = availableNightlies[0]
             core.setOutput('version', version)
+            core.endGroup()
 
             // download the source tarball
+            core.startGroup(`retrieving nodejs nightly ${version}`)
             await exec.exec('curl', ['-o', `${tmpDir}/node-${version}.tar.xz`, `https://nodejs.org/download/nightly/${version}/node-${version}.tar.xz`])
 
             // extract the source
             await io.mkdirP(sourceDir)
             await exec.exec('tar', ['xf', `${tmpDir}/node-${version}.tar.xz`, '--strip=1', '-C', sourceDir])
+            core.endGroup()
 
             // update the bundled npm
+            core.startGroup('updating bundled npm')
             await exec.exec('node', ['.', 'run', 'resetdeps'])
 
             let npmTarball = ''
@@ -65,17 +70,24 @@ jobs:
             await io.mkdirP(`${sourceDir}/deps/npm`)
 
             await exec.exec('tar', ['xf', npmTarball, '-C', `${sourceDir}/deps/npm/`, '--strip=1'])
+            core.endGroup()
 
             // configure the source directory
+            core.startGroup('configuring nodejs build')
             await exec.exec('./configure', ['--prefix', targetDir], { cwd: sourceDir })
+            core.endGroup()
 
             // run tests
+            core.startGroup('running nodejs tests')
             await exec.exec('make', ['-j4', 'test-only'], { cwd: sourceDir })
+            core.endGroup()
 
             // generate build artifact
+            core.startGroup('generating nightly nodejs build')
             await exec.exec('make', ['install'], { cwd: sourceDir })
             await exec.exec('tar', ['cfz', targetFile, '.'], { cwd: targetDir })
             core.setOutput('artifact', targetFile)
+            core.endGroup()
       - name: Upload nodejs artifact
         uses: actions/upload-artifact@v3
         with:
