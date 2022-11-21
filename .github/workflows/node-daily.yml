@@ -137,9 +137,10 @@ jobs:
       - name: Fetch nightly nodejs build artifact
         uses: actions/download-artifact@v3
         with:
-          name: ${{ needs.build-nightly.outputs.artifact }}
+          name: nodejs-nightly-${{ needs.build-nightly.outputs.version }}
       - name: Install nightly nodejs build ${{ needs.build-nightly.outputs.version }}
         uses: actions/github-script@v6
+        id: install-nightly
         with:
           script: |
             core.startGroup('extracting artifact')
@@ -148,5 +149,25 @@ jobs:
             core.endGroup()
 
             core.addPath(`${process.cwd()}/node/bin`)
+
+            let cachePath = ''
+            await exec.exec('npm', ['config', 'get', 'cache'], {
+              listeners: {
+                stdout: (data) => {
+                  cachePath += data
+                },
+              },
+            })
+            cachePath = cachePath.trim()
+            core.setOutput('cache', cachePath)
+      - name: Setup npm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.install-nightly.outputs.cache }}
+          key: npm-${{ matrix.package }}
       - run: node --version
       - run: npm --version
+      - name: Run citgm
+        run: |
+          echo "require('child_process').execSync('npm ls')" > "${RUNNER_TEMP}/citgm-test.js"
+          npx -y citgm --customTest="${RUNNER_TEMP}/citgm-test.js" --markdown ${{ matrix.package }}
