@@ -1,9 +1,10 @@
-name: nightly nodejs ci
+name: nodejs nightly integration
 on:
   workflow_dispatch:
 
 jobs:
   build:
+    name: Build nodejs nightly with updated npm
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.build.outputs.version }}
@@ -13,8 +14,8 @@ jobs:
       - name: Check out npm/cli
         uses: actions/checkout@v3
         with:
-          repository: 'npm/cli'
-      - name: Build nightly nodejs
+          repository: npm/cli
+      - name: Build nodejs nightly
         id: build
         uses: actions/github-script@v6
         with:
@@ -26,15 +27,16 @@ jobs:
             // setup some common vars
             const tmpDir = process.env.RUNNER_TEMP
             const sourceDir = `${tmpDir}/src`
-            const sourceFile = `${sourceDir}.tgz`
             const targetDir = `${tmpDir}/build`
-            const targetFile = `${targetDir}.tgz`
+            const sourceFile = `${tmpDir}/source.tgz`
+            const targetFile = `${tmpDir}/build.tgz`
 
             // find the version of the latest nightly
             core.startGroup('finding version of latest nightly nodejs')
             await exec.exec('curl', ['-o', `${tmpDir}/nightlies.json`, 'https://nodejs.org/download/nightly/index.json'])
             const availableNightlies = require(`${tmpDir}/nightlies.json`)
             const { version } = availableNightlies[0]
+
             core.setOutput('version', version)
             core.endGroup()
 
@@ -91,17 +93,15 @@ jobs:
             await exec.exec('tar', ['cfz', sourceFile, '.'], { cwd: sourceDir })
             core.setOutput('source', sourceFile)
             core.endGroup()
-      - name: Upload nodejs source artifact
+      - name: Upload nodejs artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: nodejs-nightly-${{ steps.build.outputs.version }}-source.tgz
-          path: ${{ steps.build.outputs.source }}
-      - name: Upload nodejs build artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: nodejs-nightly-${{ steps.build.outputs.version }}.tgz
-          path: ${{ steps.build.outputs.build }}
+          name: nodejs-nightly-${{ steps.build.outputs.version }}
+          path: |
+            ${{ steps.build.outputs.source }}
+            ${{ steps.build.outputs.build }}
   test:
+    name: Run nodejs tests
     runs-on: ubuntu-latest
     needs:
       - build
@@ -123,8 +123,10 @@ jobs:
             core.addPath('/usr/local/opt/ccache/libexec')
             core.addPath('/usr/lib/ccache')
 
-            await exec.exec('ls')
+            await exec.exec('tar', ['xf', 'source.tgz'])
+            await exec.exec('make', ['test-only'])
   fetch-lookup:
+    name: Retrieve package set for citgm
     runs-on: ubuntu-latest
     outputs:
       packages: ${{ steps.fetch-lookup.outputs.packages }}
@@ -156,49 +158,50 @@ jobs:
               return true
             })
             core.setOutput('packages', packages)
-  # citgm:
-  #   runs-on: ubuntu-latest
-  #   needs:
-  #     - build
-  #     - fetch-lookup
-  #   strategy:
-  #     matrix:
-  #       package: ${{ fromJson(needs.fetch-lookup.outputs.packages) }}
-  #   steps:
-  #     - name: Fetch nightly nodejs build artifact
-  #       uses: actions/download-artifact@v3
-  #       with:
-  #         name: nodejs-nightly-${{ needs.build-nightly.outputs.version }}.tgz
-  #     - name: Install nightly nodejs build ${{ needs.build.outputs.version }}
-  #       uses: actions/github-script@v6
-  #       id: install
-  #       with:
-  #         script: |
-  #           core.startGroup('extracting artifact')
-  #           await io.mkdirP(`${process.cwd()}/node`)
-  #           await exec.exec('tar', ['xf', 'nodejs-nightly-${{ needs.build.outputs.version }}.tgz', '-C', './node'])
-  #           core.endGroup()
-  #
-  #           core.addPath(`${process.cwd()}/node/bin`)
-  #
-  #           let cachePath = ''
-  #           await exec.exec('npm', ['config', 'get', 'cache'], {
-  #             listeners: {
-  #               stdout: (data) => {
-  #                 cachePath += data
-  #               },
-  #             },
-  #           })
-  #           cachePath = cachePath.trim()
-  #           core.setOutput('cache', cachePath)
-  #     - name: Setup npm cache
-  #       uses: actions/cache@v3
-  #       with:
-  #         path: ${{ steps.install.outputs.cache }}
-  #         key: npm-${{ matrix.package }}
-  #     - run: node --version
-  #     - run: npm --version
-  #     - name: Run citgm
-  #       run: |
-  #         echo "require('child_process').execSync('npm ls')" > "${RUNNER_TEMP}/citgm-test.js"
-  #         npx -y citgm --customTest="${RUNNER_TEMP}/citgm-test.js" --markdown ${{ matrix.package }}
+  citgm:
+    name: Run citgm
+    runs-on: ubuntu-latest
+    needs:
+      - build
+      - fetch-lookup
+    strategy:
+      matrix:
+        package: ${{ fromJson(needs.fetch-lookup.outputs.packages) }}
+    steps:
+      - name: Fetch nightly nodejs build artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: nodejs-nightly-${{ needs.build-nightly.outputs.version }}.tgz
+      - name: Install nightly nodejs build ${{ needs.build.outputs.version }}
+        uses: actions/github-script@v6
+        id: install
+        with:
+          script: |
+            core.startGroup('extracting artifact')
+            await io.mkdirP(`${process.cwd()}/node`)
+            await exec.exec('tar', ['xf', 'nodejs-nightly-${{ needs.build.outputs.version }}.tgz', '-C', './node'])
+            core.endGroup()
+
+            core.addPath(`${process.cwd()}/node/bin`)
+
+            let cachePath = ''
+            await exec.exec('npm', ['config', 'get', 'cache'], {
+              listeners: {
+                stdout: (data) => {
+                  cachePath += data
+                },
+              },
+            })
+            cachePath = cachePath.trim()
+            core.setOutput('cache', cachePath)
+      - name: Setup npm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.install.outputs.cache }}
+          key: npm-${{ matrix.package }}
+      - run: node --version
+      - run: npm --version
+      - name: Run citgm
+        run: |
+          echo "require('child_process').execSync('npm ls')" > "${RUNNER_TEMP}/citgm-test.js"
+          npx -y citgm --customTest="${RUNNER_TEMP}/citgm-test.js" --markdown ${{ matrix.package }}
