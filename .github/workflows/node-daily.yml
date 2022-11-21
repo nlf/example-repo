@@ -3,21 +3,20 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-nightly:
+  build:
     runs-on: ubuntu-latest
     outputs:
-      artifact: ${{ steps.build-nightly.outputs.artifact }}
-      version: ${{ steps.build-nightly.outputs.version }}
+      version: ${{ steps.build.outputs.version }}
     steps:
-      - name: Checkout npm/cli
+      - name: Install ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+      - name: Check out npm/cli
         uses: actions/checkout@v3
         with:
           repository: 'npm/cli'
-      - name: Install ccache
-        uses: hendrikmuhs/ccache-action@v1.2
-      - name: Build nodejs nightly
+      - name: Build nightly nodejs
+        id: build
         uses: actions/github-script@v6
-        id: build-nightly
         with:
           script: |
             // add ccache to the path
@@ -27,6 +26,7 @@ jobs:
             // setup some common vars
             const tmpDir = process.env.RUNNER_TEMP
             const sourceDir = `${tmpDir}/src`
+            const sourceFile = `${sourceDir}.tgz`
             const targetDir = `${tmpDir}/build`
             const targetFile = `${targetDir}.tgz`
 
@@ -74,25 +74,56 @@ jobs:
 
             // configure the source directory
             core.startGroup('configuring nodejs build')
+            await io.mkdirP(targetDir)
             await exec.exec('./configure', ['--prefix', targetDir], { cwd: sourceDir })
             core.endGroup()
 
-            // run tests
-            core.startGroup('running nodejs tests')
-            await exec.exec('make', ['-j4', 'test-only'], { cwd: sourceDir })
+            // compile
+            core.startGroup('compiling')
+            await exec.exec('make', ['-j4', 'install'], { cwd: sourceDir })
             core.endGroup()
 
-            // generate build artifact
-            core.startGroup('generating nightly nodejs build')
-            await exec.exec('make', ['install'], { cwd: sourceDir })
+            // pack the artifacts
+            core.startGroup('building artifacts')
             await exec.exec('tar', ['cfz', targetFile, '.'], { cwd: targetDir })
-            core.setOutput('artifact', targetFile)
+            core.setOutput('build', targetFile)
+
+            await exec.exec('tar', ['cfz', sourceFile, '.'], { cwd: sourceDir })
+            core.setOutput('source', sourceFile)
             core.endGroup()
-      - name: Upload nodejs artifact
+      - name: Upload nodejs source artifact
         uses: actions/upload-artifact@v3
         with:
-          name: nodejs-nightly-${{ steps.build-nightly.outputs.version }}
-          path: ${{ steps.build-nightly.outputs.artifact }}
+          name: nodejs-nightly-${{ steps.build.outputs.version }}-source.tgz
+          path: ${{ steps.build.outputs.source }}
+      - name: Upload nodejs build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: nodejs-nightly-${{ steps.build.outputs.version }}.tgz
+          path: ${{ steps.build.outputs.build }}
+  test:
+    runs-on: ubuntu-latest
+    needs:
+      - build
+    outputs:
+      version: ${{ needs.build.outputs.version }}
+    steps:
+      - name: Install ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+      - name: Fetch nightly nodejs source artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: nodejs-nightly-${{ needs.build.outputs.version }}-source.tgz
+      - name: Test nodejs nightly
+        uses: actions/github-script@v6
+        id: test
+        with:
+          script: |
+            // add ccache to the path
+            core.addPath('/usr/local/opt/ccache/libexec')
+            core.addPath('/usr/lib/ccache')
+
+            await exec.exec('ls')
   fetch-lookup:
     runs-on: ubuntu-latest
     outputs:
@@ -125,49 +156,49 @@ jobs:
               return true
             })
             core.setOutput('packages', packages)
-  citgm:
-    runs-on: ubuntu-latest
-    needs:
-      - build-nightly
-      - fetch-lookup
-    strategy:
-      matrix:
-        package: ${{ fromJson(needs.fetch-lookup.outputs.packages) }}
-    steps:
-      - name: Fetch nightly nodejs build artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: nodejs-nightly-${{ needs.build-nightly.outputs.version }}
-      - name: Install nightly nodejs build ${{ needs.build-nightly.outputs.version }}
-        uses: actions/github-script@v6
-        id: install-nightly
-        with:
-          script: |
-            core.startGroup('extracting artifact')
-            await io.mkdirP(`${process.cwd()}/node`)
-            await exec.exec('tar', ['xf', ${{ needs.build-nightly.outputs.artifact }}, '-C', './node'])
-            core.endGroup()
-
-            core.addPath(`${process.cwd()}/node/bin`)
-
-            let cachePath = ''
-            await exec.exec('npm', ['config', 'get', 'cache'], {
-              listeners: {
-                stdout: (data) => {
-                  cachePath += data
-                },
-              },
-            })
-            cachePath = cachePath.trim()
-            core.setOutput('cache', cachePath)
-      - name: Setup npm cache
-        uses: actions/cache@v3
-        with:
-          path: ${{ steps.install-nightly.outputs.cache }}
-          key: npm-${{ matrix.package }}
-      - run: node --version
-      - run: npm --version
-      - name: Run citgm
-        run: |
-          echo "require('child_process').execSync('npm ls')" > "${RUNNER_TEMP}/citgm-test.js"
-          npx -y citgm --customTest="${RUNNER_TEMP}/citgm-test.js" --markdown ${{ matrix.package }}
+  # citgm:
+  #   runs-on: ubuntu-latest
+  #   needs:
+  #     - build
+  #     - fetch-lookup
+  #   strategy:
+  #     matrix:
+  #       package: ${{ fromJson(needs.fetch-lookup.outputs.packages) }}
+  #   steps:
+  #     - name: Fetch nightly nodejs build artifact
+  #       uses: actions/download-artifact@v3
+  #       with:
+  #         name: nodejs-nightly-${{ needs.build-nightly.outputs.version }}.tgz
+  #     - name: Install nightly nodejs build ${{ needs.build.outputs.version }}
+  #       uses: actions/github-script@v6
+  #       id: install
+  #       with:
+  #         script: |
+  #           core.startGroup('extracting artifact')
+  #           await io.mkdirP(`${process.cwd()}/node`)
+  #           await exec.exec('tar', ['xf', 'nodejs-nightly-${{ needs.build.outputs.version }}.tgz', '-C', './node'])
+  #           core.endGroup()
+  #
+  #           core.addPath(`${process.cwd()}/node/bin`)
+  #
+  #           let cachePath = ''
+  #           await exec.exec('npm', ['config', 'get', 'cache'], {
+  #             listeners: {
+  #               stdout: (data) => {
+  #                 cachePath += data
+  #               },
+  #             },
+  #           })
+  #           cachePath = cachePath.trim()
+  #           core.setOutput('cache', cachePath)
+  #     - name: Setup npm cache
+  #       uses: actions/cache@v3
+  #       with:
+  #         path: ${{ steps.install.outputs.cache }}
+  #         key: npm-${{ matrix.package }}
+  #     - run: node --version
+  #     - run: npm --version
+  #     - name: Run citgm
+  #       run: |
+  #         echo "require('child_process').execSync('npm ls')" > "${RUNNER_TEMP}/citgm-test.js"
+  #         npx -y citgm --customTest="${RUNNER_TEMP}/citgm-test.js" --markdown ${{ matrix.package }}
