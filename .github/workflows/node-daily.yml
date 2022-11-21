@@ -113,7 +113,7 @@ jobs:
       - name: Fetch nightly nodejs source artifact
         uses: actions/download-artifact@v3
         with:
-          name: nodejs-nightly-${{ needs.build.outputs.version }}-source.tgz
+          name: nodejs-nightly-${{ needs.build.outputs.version }}
       - name: Test nodejs nightly
         uses: actions/github-script@v6
         id: test
@@ -171,7 +171,7 @@ jobs:
       - name: Fetch nightly nodejs build artifact
         uses: actions/download-artifact@v3
         with:
-          name: nodejs-nightly-${{ needs.build-nightly.outputs.version }}.tgz
+          name: nodejs-nightly-${{ needs.build-nightly.outputs.version }}
       - name: Install nightly nodejs build ${{ needs.build.outputs.version }}
         uses: actions/github-script@v6
         id: install
@@ -179,7 +179,7 @@ jobs:
           script: |
             core.startGroup('extracting artifact')
             await io.mkdirP(`${process.cwd()}/node`)
-            await exec.exec('tar', ['xf', 'nodejs-nightly-${{ needs.build.outputs.version }}.tgz', '-C', './node'])
+            await exec.exec('tar', ['xf', 'build.tgz', '-C', `${process.cwd()}/node`])
             core.endGroup()
 
             core.addPath(`${process.cwd()}/node/bin`)
