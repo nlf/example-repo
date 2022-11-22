@@ -183,7 +183,9 @@ jobs:
       - fetch-lookup
     strategy:
       fail-fast: false
-      matrix: ${{ fromJson(needs.fetch-lookup.outputs.matrix) }}
+      matrix:
+        package: ${{ fromJson(needs.fetch-lookup.outputs.matrix).package }}
+        include: ${{ fromJson(needs.fetch-lookup.outputs.matrix).include }}
     steps:
       - name: Fetch nightly nodejs build artifact
         uses: actions/download-artifact@v3
