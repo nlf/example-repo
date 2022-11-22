@@ -40,31 +40,42 @@ jobs:
           sourceFile="${RUNNER_TEMP}/source.tgz"
           targetFile="${RUNNER_TEMP}/build.tgz"
 
+          echo "::group::finding latest nightly version"
           version="$(curl -sSL https://nodejs.org/download/nightly/index.json | jq -r .[0].version)"
           echo "version=${version}" >> $GITHUB_OUTPUT
+          echo "::endgroup::"
 
+          echo "::group::extracting source"
           mkdir -p "$sourceDir"
           curl -sSL "https://nodejs.org/download/nightly/${version}/node-${version}.tar.gz" |\
             tar xz -C "$sourceDir" --strip=1
+          echo "::endgroup::"
 
+          echo "::group::packing npm release"
           node . run resetdeps
           npmtarball="$(node . pack --loglevel=silent --json | jq -r .[0].filename)"
-
           rm -rf "${sourceDir}/deps/npm"
           mkdir -p "${sourceDir}/deps/npm"
           tar xfz "$npmtarball" -C "${sourceDir}/deps/npm" --strip=1
+          echo "::endgroup::"
 
+          echo "::group::packing nodejs source"
           tar cfz "$sourceFile" -C "$sourceDir" .
           echo "source=$sourceFile" >> $GITHUB_OUTPUT
+          echo "::endgroup::"
 
+          echo "::group::building nodejs"
           mkdir -p "$targetDir"
           pushd "$sourceDir" >/dev/null
           ./configure --prefix="$targetDir"
           make -j4 install
           popd >/dev/null
+          echo "::endgroup::"
 
+          echo "::group::packing nodejs build"
           tar cfz "$targetFile" -C "$targetDir" .
           echo "build=$targetFile" >> $GITHUB_OUTPUT
+          echo "::endgroup::"
       - name: upload artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -151,6 +162,8 @@ jobs:
         run: |
           mkdir -p ./node
           tar xf build.tgz -C ./node
+          mkdir -p ./node-src
+          tar xf source.tgz -C ./node-src
 
           echo "$(pwd)/node/bin" >> $GITHUB_PATH
           echo "cache=$(npm config get cache)" >> $GITHUB_OUTPUT
@@ -163,6 +176,4 @@ jobs:
       - run: npm --version
       - name: citgm
         run: |
-          # echo "require('child_process').execSync('npm ls')" > "${RUNNER_TEMP}/citgm-test.js"
-          npx -y citgm --markdown ${{ matrix.package }}
-          # npx -y citgm --customTest="${RUNNER_TEMP}/citgm-test.js" --markdown ${{ matrix.package }}
+          npx -y citgm --markdown --nodedir=./node-src ${{ matrix.package }}
