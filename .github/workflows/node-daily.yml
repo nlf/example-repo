@@ -1,6 +1,11 @@
 name: nodejs nightly integration
+
 on:
   workflow_dispatch:
+
+permissions:
+  actions:
+    - write
 
 jobs:
   build:
@@ -9,8 +14,10 @@ jobs:
     outputs:
       version: ${{ steps.build.outputs.version }}
     steps:
-      - name: Install ccache
-        uses: hendrikmuhs/ccache-action@v1.2
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          override_cache_key: nodejs-nightly
       - name: Check out npm/cli
         uses: actions/checkout@v3
         with:
@@ -20,10 +27,6 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            // add ccache to the path
-            core.addPath('/usr/local/opt/ccache/libexec')
-            core.addPath('/usr/lib/ccache')
-
             // setup some common vars
             const tmpDir = process.env.RUNNER_TEMP
             const sourceDir = `${tmpDir}/src`
@@ -74,6 +77,11 @@ jobs:
             await exec.exec('tar', ['xf', npmTarball, '-C', `${sourceDir}/deps/npm/`, '--strip=1'])
             core.endGroup()
 
+            core.startGroup('packing source artifact')
+            await exec.exec('tar', ['cfz', sourceFile, '.'], { cwd: sourceDir })
+            core.setOutput('source', sourceFile)
+            core.endGroup()
+
             // configure the source directory
             core.startGroup('configuring nodejs build')
             await io.mkdirP(targetDir)
@@ -85,13 +93,10 @@ jobs:
             await exec.exec('make', ['-j4', 'install'], { cwd: sourceDir })
             core.endGroup()
 
-            // pack the artifacts
-            core.startGroup('building artifacts')
+            // pack the artifact
+            core.startGroup('packing build artifact')
             await exec.exec('tar', ['cfz', targetFile, '.'], { cwd: targetDir })
             core.setOutput('build', targetFile)
-
-            await exec.exec('tar', ['cfz', sourceFile, '.'], { cwd: sourceDir })
-            core.setOutput('source', sourceFile)
             core.endGroup()
       - name: Upload nodejs artifacts
         uses: actions/upload-artifact@v3
@@ -108,23 +113,21 @@ jobs:
     outputs:
       version: ${{ needs.build.outputs.version }}
     steps:
-      - name: Install ccache
-        uses: hendrikmuhs/ccache-action@v1.2
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          override_cache_key: nodejs-nightly
       - name: Fetch nightly nodejs source artifact
         uses: actions/download-artifact@v3
         with:
           name: nodejs-nightly-${{ needs.build.outputs.version }}
       - name: Test nodejs nightly
         uses: actions/github-script@v6
-        id: test
         with:
           script: |
-            // add ccache to the path
-            core.addPath('/usr/local/opt/ccache/libexec')
-            core.addPath('/usr/lib/ccache')
-
             await exec.exec('tar', ['xf', 'source.tgz'])
-            await exec.exec('make', ['test-only'])
+            await exec.exec('./configure')
+            await exec.exec('make', ['-j4', 'test-only'])
   fetch-lookup:
     name: Retrieve package set for citgm
     runs-on: ubuntu-latest
@@ -171,7 +174,7 @@ jobs:
       - name: Fetch nightly nodejs build artifact
         uses: actions/download-artifact@v3
         with:
-          name: nodejs-nightly-${{ needs.build-nightly.outputs.version }}
+          name: nodejs-nightly-${{ needs.build.outputs.version }}
       - name: Install nightly nodejs build ${{ needs.build.outputs.version }}
         uses: actions/github-script@v6
         id: install
