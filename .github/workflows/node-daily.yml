@@ -35,12 +35,11 @@ jobs:
         run: |
           set -eo pipefail
 
-          local sourceDir="${RUNNER_TEMP}/src"
-          local targetDir="${RUNNER_TEMP}/build"
-          local sourceFile="${RUNNER_TEMP}/source.tgz"
-          local targetFile="${RUNNER_TEMP}/build.tgz"
+          sourceDir="${RUNNER_TEMP}/src"
+          targetDir="${RUNNER_TEMP}/build"
+          sourceFile="${RUNNER_TEMP}/source.tgz"
+          targetFile="${RUNNER_TEMP}/build.tgz"
 
-          local version
           version="$(curl -sSL https://nodejs.org/download/nightly/index.json | jq -r .[0].version)"
           echo "version=${version}" >> $GITHUB_OUTPUT
 
@@ -49,7 +48,6 @@ jobs:
             tar x -C "$sourceDir" --strip=1
 
           node . run resetdeps
-          local npmtarball
           npmtarball="$(node . pack --loglevel=silent --json | jq -r .[0].filename)"
 
           rm -rf "${sourceDir}/deps/npm"
