@@ -131,7 +131,7 @@ jobs:
     name: Retrieve package set for citgm
     runs-on: ubuntu-latest
     outputs:
-      packages: ${{ steps.fetch-lookup.outputs.packages }}
+      matrix: ${{ steps.fetch-lookup.outputs.matrix }}
     steps:
       - name: Fetch lookup table
         id: fetch-lookup
@@ -150,25 +150,40 @@ jobs:
             })
             lookup = JSON.parse(lookup)
 
-            const packages = Object.keys(lookup).filter((name) => {
-              const item = lookup[name]
-              if (item.skip === true) {
-                return false
-              }
-              // TODO expand this to skip more things
+            const matrix = {
+              package: {},
+              include: [],
+            }
 
-              return true
-            })
-            core.setOutput('packages', packages)
+            const keywords = ['ubuntu', 'debian', 'linux', 'x86', '>=11', '>=12', '>=16', '>=17']
+
+            for (const key in lookup) {
+              const item = lookup[key]
+
+              if (item.skip === true ||
+                  (typeof item.skip === 'string' && keywords.includes(item.skip)) ||
+                  (Array.isArray(item.skip) && keywords.some((keyword) => item.skip.includes(keyword)))) {
+                continue
+              }
+
+              matrix.package.push(key)
+              if (item.flaky === true ||
+                  (typeof item.flaky === 'string' && keywords.includes(item.flaky)) ||
+                  (Array.isArray(item.flaky) && keywords.some((keyword) => item.flaky.includes(keyword)))) {
+                matrix.include.push({ package: key, flaky: true })
+              }
+            }
+            core.setOutput('matrix', matrix)
   citgm:
     name: Run citgm
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.flaky }}
     needs:
       - build
       - fetch-lookup
     strategy:
-      matrix:
-        package: ${{ fromJson(needs.fetch-lookup.outputs.packages) }}
+      fail-fast: false
+      matrix: ${{ fromJson(needs.fetch-lookup.outputs.matrix) }}
     steps:
       - name: Fetch nightly nodejs build artifact
         uses: actions/download-artifact@v3
