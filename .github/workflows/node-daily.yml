@@ -151,7 +151,7 @@ jobs:
             lookup = JSON.parse(lookup)
 
             const matrix = {
-              package: {},
+              package: [],
               include: [],
             }
 
