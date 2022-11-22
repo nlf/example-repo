@@ -45,14 +45,14 @@ jobs:
 
           mkdir -p "$sourceDir"
           curl -sSL "https://nodejs.org/download/nightly/${version}/node-${version}.tar.gz" |\
-            tar x -C "$sourceDir" --strip=1
+            tar xz -C "$sourceDir" --strip=1
 
           node . run resetdeps
           npmtarball="$(node . pack --loglevel=silent --json | jq -r .[0].filename)"
 
           rm -rf "${sourceDir}/deps/npm"
           mkdir -p "${sourceDir}/deps/npm"
-          tar xf "$npmtarball" -C "${sourceDir}/deps/npm" --strip=1
+          tar xfz "$npmtarball" -C "${sourceDir}/deps/npm" --strip=1
 
           tar cfz "$sourceFile" -C "$sourceDir" .
           echo "source=$sourceFile" >> $GITHUB_OUTPUT
