@@ -1,227 +1,170 @@
-name: nodejs nightly integration
+name: nodejs nightly build
 
 on:
   workflow_dispatch:
 
+# used by setup-ccache-action's post hook to cleanup old caches
 permissions:
   actions: write
 
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+env:
+  # used for both the ccache key and artifact names
+  key_prefix: nodejs-nightly 
+
 jobs:
-  build:
-    name: Build nodejs nightly with updated npm
+  build-nodejs:
+    name: build nodejs
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.build.outputs.version }}
+      version: ${{ steps.build-nodejs.outputs.version }}
     steps:
-      - name: Setup ccache
+      - name: setup ccache
         uses: Chocobo1/setup-ccache-action@v1
         with:
-          override_cache_key: nodejs-nightly
-      - name: Check out npm/cli
+          override_cache_key: ${{ env.key_prefix }}
+      - name: checkout npm/cli
         uses: actions/checkout@v3
         with:
           repository: npm/cli
-      - name: Build nodejs nightly
-        id: build
-        uses: actions/github-script@v6
-        with:
-          script: |
-            // setup some common vars
-            const tmpDir = process.env.RUNNER_TEMP
-            const sourceDir = `${tmpDir}/src`
-            const targetDir = `${tmpDir}/build`
-            const sourceFile = `${tmpDir}/source.tgz`
-            const targetFile = `${tmpDir}/build.tgz`
+      - name: build nodejs
+        id: build-nodejs
+        run: |
+          set -eo pipefail
 
-            // find the version of the latest nightly
-            core.startGroup('finding version of latest nightly nodejs')
-            await exec.exec('curl', ['-o', `${tmpDir}/nightlies.json`, 'https://nodejs.org/download/nightly/index.json'])
-            const availableNightlies = require(`${tmpDir}/nightlies.json`)
-            const { version } = availableNightlies[0]
+          local sourceDir="${RUNNER_TEMP}/src"
+          local targetDir="${RUNNER_TEMP}/build"
+          local sourceFile="${RUNNER_TEMP}/source.tgz"
+          local targetFile="${RUNNER_TEMP}/build.tgz"
 
-            core.setOutput('version', version)
-            core.endGroup()
+          local version
+          version="$(curl -sSL https://nodejs.org/download/nightly/index.json | jq -r .[0].version)"
+          echo "version=${version}" >> $GITHUB_OUTPUT
 
-            // download the source tarball
-            core.startGroup(`retrieving nodejs nightly ${version}`)
-            await exec.exec('curl', ['-o', `${tmpDir}/node-${version}.tar.xz`, `https://nodejs.org/download/nightly/${version}/node-${version}.tar.xz`])
+          mkdir -p "$sourceDir"
+          curl -sSL "https://nodejs.org/download/nightly/${version}/node-${version}.tar.gz" |\
+            tar x -C "$sourceDir" --strip=1
 
-            // extract the source
-            await io.mkdirP(sourceDir)
-            await exec.exec('tar', ['xf', `${tmpDir}/node-${version}.tar.xz`, '--strip=1', '-C', sourceDir])
-            core.endGroup()
+          node . run resetdeps
+          local npmtarball
+          npmtarball="$(node . pack --loglevel=silent --json | jq -r .[0].filename)"
 
-            // update the bundled npm
-            core.startGroup('updating bundled npm')
-            await exec.exec('node', ['.', 'run', 'resetdeps'])
+          rm -rf "${sourceDir}/deps/npm"
+          mkdir -p "${sourceDir}/deps/npm"
+          tar xf "$npmtarball" -C "${sourceDir}/deps/npm" --strip=1
 
-            let npmTarball = ''
-            await exec.exec('node', ['.', 'pack', '--loglevel=silent'], {
-              listeners: {
-                stdout: (data) => {
-                  npmTarball += data
-                },
-              },
-            })
-            npmTarball = npmTarball
-              .trim()
-              .split(/\n/g)
-              .find((item) => {
-                return item.startsWith('npm-') && item.endsWith('.tgz')
-              })
+          tar cfz "$sourceFile" -C "$sourceDir" .
+          echo "source=$sourceFile" >> $GITHUB_OUTPUT
 
-            await io.rmRF(`${sourceDir}/deps/npm`)
-            await io.mkdirP(`${sourceDir}/deps/npm`)
+          mkdir -p "$targetDir"
+          pushd "$sourceDir" >/dev/null
+          ./configure --prefix="$targetDir"
+          make -j4 install
+          popd >/dev/null
 
-            await exec.exec('tar', ['xf', npmTarball, '-C', `${sourceDir}/deps/npm/`, '--strip=1'])
-            core.endGroup()
-
-            core.startGroup('packing source artifact')
-            await exec.exec('tar', ['cfz', sourceFile, '.'], { cwd: sourceDir })
-            core.setOutput('source', sourceFile)
-            core.endGroup()
-
-            // configure the source directory
-            core.startGroup('configuring nodejs build')
-            await io.mkdirP(targetDir)
-            await exec.exec('./configure', ['--prefix', targetDir], { cwd: sourceDir })
-            core.endGroup()
-
-            // compile
-            core.startGroup('compiling')
-            await exec.exec('make', ['-j4', 'install'], { cwd: sourceDir })
-            core.endGroup()
-
-            // pack the artifact
-            core.startGroup('packing build artifact')
-            await exec.exec('tar', ['cfz', targetFile, '.'], { cwd: targetDir })
-            core.setOutput('build', targetFile)
-            core.endGroup()
-      - name: Upload nodejs artifacts
+          tar cfz "$targetFile" -C "$targetDir" .
+          echo "build=$targetFile" >> $GITHUB_OUTPUT
+      - name: upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: nodejs-nightly-${{ steps.build.outputs.version }}
+          name: ${{ env.key_prefix }}-${{ steps.build-nodejs.outputs.version }}
           path: |
-            ${{ steps.build.outputs.source }}
-            ${{ steps.build.outputs.build }}
-  test:
-    name: Run nodejs tests
+            ${{ steps.build-nodejs.outputs.source }}
+            ${{ steps.build-nodejs.outputs.build }}
+
+  test-nodejs:
+    name: test nodejs
     runs-on: ubuntu-latest
     needs:
-      - build
+      - build-nodejs
     outputs:
-      version: ${{ needs.build.outputs.version }}
+      version: ${{ needs.build-nodejs.outputs.version }}
     steps:
-      - name: Setup ccache
+      - name: setup ccache
         uses: Chocobo1/setup-ccache-action@v1
         with:
-          override_cache_key: nodejs-nightly
-      - name: Fetch nightly nodejs source artifact
+          override_cache_key: ${{ env.key_prefix }}
+      - name: download artifacts
         uses: actions/download-artifact@v3
         with:
-          name: nodejs-nightly-${{ needs.build.outputs.version }}
-      - name: Test nodejs nightly
-        uses: actions/github-script@v6
-        with:
-          script: |
-            await exec.exec('tar', ['xf', 'source.tgz'])
-            await exec.exec('./configure')
-            await exec.exec('make', ['-j4', 'test-only'])
-  fetch-lookup:
-    name: Retrieve package set for citgm
+          name: ${{ env.key_prefix }}-${{ needs.build-nodejs.outputs.version }}
+      - name: test nodejs
+        run: |
+          tar xf source.tgz
+          ./configure
+          make -j4 test-only
+
+  build-matrix:
+    name: build matrix
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.fetch-lookup.outputs.matrix }}
+      matrix: ${{ steps.build-matrix.outputs.matrix }}
     steps:
-      - name: Fetch lookup table
-        id: fetch-lookup
+      - name: build matrix
+        id: build-matrix
         uses: actions/github-script@v6
         with:
           script: |
-            await exec.exec('npm', ['install', 'citgm'])
+            const matchesKeyword = (value) => {
+              const keywords = ['ubuntu', 'debian', 'linux', 'x86', '>=11', '>=12', '>=16', '>=17']
+              if (value === true ||
+                  (typeof value === 'string' && keywords.includes(value)) ||
+                  (Array.isArray(value) && keywords.some((keyword) => value.includes(keyword)))) {
+                return true
+              }
 
-            let lookup = ''
-            await exec.exec('cat', ['node_modules/citgm/lib/lookup.json'], {
-              listeners: {
-                stdout: (data) => {
-                  lookup += data
-                },
-              },
-            })
-            lookup = JSON.parse(lookup)
-
-            const matrix = {
-              package: [],
-              include: [],
+              return false
             }
 
-            const keywords = ['ubuntu', 'debian', 'linux', 'x86', '>=11', '>=12', '>=16', '>=17']
-
+            await exec.exec('npm', ['install', 'citgm'])
+            const lookup = require('./node_modules/citgm/lib/lookup.json')
+            const matrix = []
             for (const key in lookup) {
               const item = lookup[key]
-
-              if (item.skip === true ||
-                  (typeof item.skip === 'string' && keywords.includes(item.skip)) ||
-                  (Array.isArray(item.skip) && keywords.some((keyword) => item.skip.includes(keyword)))) {
+              if (matchesKeyword(item.skip) || item.yarn === true) {
                 continue
               }
 
-              matrix.package.push(key)
-              if (item.flaky === true ||
-                  (typeof item.flaky === 'string' && keywords.includes(item.flaky)) ||
-                  (Array.isArray(item.flaky) && keywords.some((keyword) => item.flaky.includes(keyword)))) {
-                matrix.include.push({ package: key, flaky: true })
-              } else {
-                matrix.include.push({ package: key, flaky: false })
-              }
+              matrix.push({ package: key, flaky: matchesKeyword(item.flaky) })
             }
             core.setOutput('matrix', matrix)
+
   citgm:
-    name: Run citgm
+    name: citgm
     runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.flaky }}
     needs:
-      - build
-      - fetch-lookup
+      - build-nodejs
+      - build-matrix
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJson(needs.fetch-lookup.outputs.matrix).include }}
+        include: ${{ fromJson(needs.build-matrix.outputs.matrix) }}
     steps:
-      - name: Fetch nightly nodejs build artifact
+      - name: download artifacts
         uses: actions/download-artifact@v3
         with:
-          name: nodejs-nightly-${{ needs.build.outputs.version }}
-      - name: Install nightly nodejs build ${{ needs.build.outputs.version }}
-        uses: actions/github-script@v6
+          name: ${{ env.key_prefix }}-${{ needs.build-nodejs.outputs.version }}
+      - name: install nodejs ${{ needs.build-nodejs.outputs.version }}
         id: install
-        with:
-          script: |
-            core.startGroup('extracting artifact')
-            await io.mkdirP(`${process.cwd()}/node`)
-            await exec.exec('tar', ['xf', 'build.tgz', '-C', `${process.cwd()}/node`])
-            core.endGroup()
+        run: |
+          mkdir -p ./node
+          tar xf build.tgz -C ./node
 
-            core.addPath(`${process.cwd()}/node/bin`)
-
-            let cachePath = ''
-            await exec.exec('npm', ['config', 'get', 'cache'], {
-              listeners: {
-                stdout: (data) => {
-                  cachePath += data
-                },
-              },
-            })
-            cachePath = cachePath.trim()
-            core.setOutput('cache', cachePath)
-      - name: Setup npm cache
+          echo "$(pwd)/node/bin" >> $GITHUB_PATH
+          echo "cache=$(npm config get cache)" >> $GITHUB_OUTPUT
+      - name: setup npm cache
         uses: actions/cache@v3
         with:
           path: ${{ steps.install.outputs.cache }}
           key: npm-${{ matrix.package }}
       - run: node --version
       - run: npm --version
-      - name: Run citgm
+      - name: citgm
         run: |
-          echo "require('child_process').execSync('npm ls')" > "${RUNNER_TEMP}/citgm-test.js"
-          npx -y citgm --customTest="${RUNNER_TEMP}/citgm-test.js" --markdown ${{ matrix.package }}
+          # echo "require('child_process').execSync('npm ls')" > "${RUNNER_TEMP}/citgm-test.js"
+          npx -y citgm --markdown ${{ matrix.package }}
+          # npx -y citgm --customTest="${RUNNER_TEMP}/citgm-test.js" --markdown ${{ matrix.package }}
