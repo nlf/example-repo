@@ -171,6 +171,8 @@ jobs:
                   (typeof item.flaky === 'string' && keywords.includes(item.flaky)) ||
                   (Array.isArray(item.flaky) && keywords.some((keyword) => item.flaky.includes(keyword)))) {
                 matrix.include.push({ package: key, flaky: true })
+              } else {
+                matrix.include.push({ package: key, flaky: false })
               }
             }
             core.setOutput('matrix', matrix)
@@ -184,7 +186,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: ${{ fromJson(needs.fetch-lookup.outputs.matrix).package }}
         include: ${{ fromJson(needs.fetch-lookup.outputs.matrix).include }}
     steps:
       - name: Fetch nightly nodejs build artifact
