@@ -195,7 +195,7 @@ jobs:
             core.setOutput('matrix', matrix)
 
   npm-ls:
-    name: npm ls ${{ matrix.package }}
+    name: ${{ matrix.package }} - npm ls
     runs-on: ubuntu-latest
     needs:
       - build-nodejs
@@ -240,7 +240,7 @@ jobs:
           citgm --tap --nodedir="${RUNNER_TEMP}/node-src" --customTest="${RUNNER_TEMP}/citgm-npm-ls.js" ${{ matrix.package }}
 
   citgm:
-    name: citgm ${{ matrix.package }} ${{ matrix.flaky && '(flaky)' || '' }} ${{ matrix.knownFailure && '(known failure)' || '' }}
+    name: ${{ matrix.package }} - citgm ${{ matrix.flaky && '(flaky)' || '' }} ${{ matrix.knownFailure && '(known failure)' || '' }}
     runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.flaky || matrix.knownFailure }}
     needs:
