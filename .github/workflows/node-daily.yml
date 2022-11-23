@@ -142,7 +142,7 @@ jobs:
             core.setOutput('matrix', matrix)
 
   citgm:
-    name: citgm
+    name: citgm ${{ matrix.package }} ${{ matrix.flaky && "(flaky)" || "" }}
     runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.flaky }}
     needs:
