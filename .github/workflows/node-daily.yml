@@ -205,19 +205,23 @@ jobs:
       matrix:
         include: ${{ fromJson(needs.build-matrix.outputs.matrix) }}
     steps:
+      - name: checkout npm/cli
+        uses: actions/checkout@v3
+        with:
+          repository: npm/cli
       - name: download artifacts
         uses: actions/download-artifact@v3
         with:
           name: ${{ env.key_prefix }}-${{ needs.build-nodejs.outputs.version }}
+          path: ${{ runner.temp }}
       - name: install nodejs ${{ needs.build-nodejs.outputs.version }}
         id: install
         run: |
-          mkdir -p ./node
-          tar xf build.tgz -C ./node
-          mkdir -p ./node-src
-          tar xf source.tgz -C ./node-src
+          mkdir -p "${RUNNER_TEMP}/node" "${RUNNER_TEMP}/node-src"
+          tar xf "${RUNNER_TEMP}/build.tgz" -C "${RUNNER_TEMP}/node"
+          tar xf "${RUNNER_TEMP}/source.tgz" -C "${RUNNER_TEMP}/node-src"
 
-          echo "$(pwd)/node/bin" >> $GITHUB_PATH
+          echo "${RUNNER_TEMP}/node/bin" >> $GITHUB_PATH
           echo "cache=$(npm config get cache)" >> $GITHUB_OUTPUT
       - name: setup npm cache
         uses: actions/cache@v3
@@ -247,19 +251,23 @@ jobs:
       matrix:
         include: ${{ fromJson(needs.build-matrix.outputs.matrix) }}
     steps:
+      - name: checkout npm/cli
+        uses: actions/checkout@v3
+        with:
+          repository: npm/cli
       - name: download artifacts
         uses: actions/download-artifact@v3
         with:
           name: ${{ env.key_prefix }}-${{ needs.build-nodejs.outputs.version }}
+          path: ${{ runner.temp }}
       - name: install nodejs ${{ needs.build-nodejs.outputs.version }}
         id: install
         run: |
-          mkdir -p ./node
-          tar xf build.tgz -C ./node
-          mkdir -p ./node-src
-          tar xf source.tgz -C ./node-src
+          mkdir -p "${RUNNER_TEMP}/node" "${RUNNER_TEMP}/node-src"
+          tar xf "${RUNNER_TEMP}/build.tgz" -C "${RUNNER_TEMP}/node"
+          tar xf "${RUNNER_TEMP}/source.tgz" -C "${RUNNER_TEMP}/node-src"
 
-          echo "$(pwd)/node/bin" >> $GITHUB_PATH
+          echo "${RUNNER_TEMP}/node/bin" >> $GITHUB_PATH
           echo "cache=$(npm config get cache)" >> $GITHUB_OUTPUT
       - name: setup npm cache
         uses: actions/cache@v3
