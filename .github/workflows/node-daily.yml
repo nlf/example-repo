@@ -237,7 +237,7 @@ jobs:
         run: |
           npm i -g citgm
           echo "require('child_process').execSync('npm ls')" > "${RUNNER_TEMP}/citgm-npm-ls.js"
-          citgm --tap --nodedir=./node-src --customTest="${RUNNER_TEMP}/citgm-npm-ls.js" ${{ matrix.package }}
+          citgm --tap --nodedir="${RUNNER_TEMP}/node-src" --customTest="${RUNNER_TEMP}/citgm-npm-ls.js" ${{ matrix.package }}
 
   citgm:
     name: citgm ${{ matrix.package }} ${{ matrix.flaky && '(flaky)' || '' }} ${{ matrix.knownFailure && '(known failure)' || '' }}
@@ -282,4 +282,4 @@ jobs:
       - name: citgm
         run: |
           npm i -g citgm@latest
-          citgm --tap --nodedir=./node-src ${{ matrix.package }}
+          citgm --tap --nodedir="${RUNNER_TEMP}/node-src" ${{ matrix.package }}
