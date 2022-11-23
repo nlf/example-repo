@@ -186,7 +186,8 @@ jobs:
             const matrix = []
             for (const key in lookup) {
               const item = lookup[key]
-              if (matchesKeyword(item.skip) || item.yarn === true) {
+              // we omit npm from the matrix because its tests are run as their own job
+              if (matchesKeyword(item.skip) || item.yarn === true || key === 'npm') {
                 continue
               }
 
