@@ -136,6 +136,9 @@ jobs:
           key: npm-tests
       - run: node --version
       - run: npm --version
+      - name: setup tap problem matcher
+        run: |
+          echo "::add-matcher::.github/matchers/tap.json"
       - name: test npm
         run: |
           node . run resetdeps
@@ -223,6 +226,9 @@ jobs:
           key: npm-${{ matrix.package }}
       - run: node --version
       - run: npm --version
+      - name: setup tap problem matcher
+        run: |
+          echo "::add-matcher::.github/matchers/tap.json"
       - name: npm ls
         run: |
           npm i -g citgm
@@ -262,6 +268,9 @@ jobs:
           key: npm-${{ matrix.package }}
       - run: node --version
       - run: npm --version
+      - name: setup tap problem matcher
+        run: |
+          echo "::add-matcher::.github/matchers/tap.json"
       - name: citgm
         run: |
           npm i -g citgm@latest
