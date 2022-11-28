@@ -194,7 +194,7 @@ jobs:
               const meta = lookup[package]
 
               // we omit npm from the matrix because its tests are run as their own job
-              if (matchesKeyword(item.skip) || item.yarn === true || key === 'npm') {
+              if (matchesKeyword(meta.skip) || meta.yarn === true || package === 'npm') {
                 continue
               }
 
@@ -214,10 +214,19 @@ jobs:
                 }
               }
 
+              const rawEnv = {
+                'npm_config_audit': '',
+                'npm_config_fund': '',
+                ...meta.envVar
+              }
+              const env = Object.keys(rawEnv).map((key) => {
+                return `${key}="${rawEnv[key]}"`
+              }).join(' ')
+
               matrix.push({
-                package: key,
+                package,
                 version: context.version,
-                env: meta.envVar || {},
+                env,
                 steps: [install, 'npm ls', ...test],
                 flaky: matchesKeyword(item.flaky),
                 knownFailure: knownFailures.includes(key),
@@ -284,10 +293,10 @@ jobs:
           fi
 
           pushd "$TARGET_DIR" >/dev/null
-          for row in $(echo "${{ toJSON(matrix.commands) }}" | jq -r '.[] | @base64'); do
+          for row in $(echo "${{ toJSON(matrix.steps) }}" | jq -r '.[] | @base64'); do
             COMMAND=$(echo "$row" | base64 --decode)
             echo "::group::$COMMAND"
-            eval "$COMMAND"
+            env ${{ matrix.env }} $COMMAND
             if [[ $? -ne 0 ]]; then
               echo "::error ::$COMMAND failed"
             fi
