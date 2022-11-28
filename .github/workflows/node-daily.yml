@@ -275,7 +275,7 @@ jobs:
       - name: citgm
         run: |
           set -e
-          TARGET_DIR="${RUNNER_TEMP}/${{ matrix.package }}"
+          TARGET_DIR="${PWD}/citgm"
           mkdir -p "$TARGET_DIR"
 
           if [[ -n "${{ matrix.repo }}" ]]; then
@@ -286,7 +286,7 @@ jobs:
             echo "::endgroup::"
           elif [[ -n "${{ matrix.url }}" ]]; then
             echo "::group::downloading ${{ matrix.url }}"
-            curl -sSL "${{ matrix.url }}" | tar xz -C "$TARGET_DIR"
+            curl -sSL "${{ matrix.url }}" | tar xz -C "$TARGET_DIR" --strip=1
             echo "::endgroup::"
           fi
 
