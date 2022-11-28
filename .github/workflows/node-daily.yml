@@ -234,7 +234,6 @@ jobs:
     name: citgm - ${{ matrix.package }}@${{ matrix.version }} ${{ matrix.flaky && '(flaky)' || '' }} ${{ matrix.knownFailure && '(known failure)' || '' }}
     runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.flaky || matrix.knownFailure }}
-    env: ${{ matrix.env }}
     needs:
       - build-nodejs
       - build-matrix
@@ -273,10 +272,13 @@ jobs:
         run: |
           echo "::add-matcher::.github/matchers/tap.json"
       - name: citgm
+        env: ${{ matrix.env }}
         run: |
           set -e
           TARGET_DIR="${RUNNER_TEMP}/citgm"
           mkdir -p "$TARGET_DIR"
+
+          export npm_config_nodedir="${RUNNER_TEMP}/node-src"
 
           if [[ -n "${{ matrix.repo }}" ]]; then
             echo "::group::cloning ${{ matrix.repo }}"
