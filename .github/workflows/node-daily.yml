@@ -102,6 +102,7 @@ jobs:
           name: ${{ env.key_prefix }}-${{ needs.build-nodejs.outputs.version }}
       - name: test nodejs
         run: |
+          set -e
           tar xf source.tgz
           ./configure
           make -j4 test-only
@@ -124,6 +125,7 @@ jobs:
       - name: install nodejs ${{ needs.build-nodejs.outputs.version }}
         id: install
         run: |
+          set -e
           mkdir -p "${RUNNER_TEMP}/node"
           tar xf "${RUNNER_TEMP}/build.tgz" -C "${RUNNER_TEMP}/node"
 
@@ -141,6 +143,7 @@ jobs:
           echo "::add-matcher::.github/matchers/tap.json"
       - name: test npm
         run: |
+          set -e
           node . run resetdeps
           node . link
           node . run test -ws -iwr --if-present --ignore-scripts
@@ -252,6 +255,7 @@ jobs:
       - name: install nodejs ${{ needs.build-nodejs.outputs.version }}
         id: install
         run: |
+          set -e
           mkdir -p "${RUNNER_TEMP}/node" "${RUNNER_TEMP}/node-src"
           tar xf "${RUNNER_TEMP}/build.tgz" -C "${RUNNER_TEMP}/node"
           tar xf "${RUNNER_TEMP}/source.tgz" -C "${RUNNER_TEMP}/node-src"
@@ -270,7 +274,7 @@ jobs:
           echo "::add-matcher::.github/matchers/tap.json"
       - name: citgm
         run: |
-          set -x
+          set -e
           TARGET_DIR="${RUNNER_TEMP}/${{ matrix.package }}"
           mkdir -p "$TARGET_DIR"
 
@@ -288,7 +292,7 @@ jobs:
 
           pushd "$TARGET_DIR" >/dev/null
           echo '${{ toJSON(matrix.commands) }}'
-          set +x
+          set +e
           FINALEXIT=0
           for row in $(echo '${{ toJSON(matrix.commands) }}' | jq -r '.[] | @base64'); do
             COMMAND=$(echo "$row" | base64 --decode)
