@@ -220,8 +220,8 @@ jobs:
                 version: context.version,
                 env,
                 commands: [install, 'npm ls', ...test],
-                flaky: matchesKeyword(item.flaky),
-                knownFailure: knownFailures.includes(key),
+                flaky: matchesKeyword(meta.flaky),
+                knownFailure: knownFailures.includes(package),
                 ...details,
               })
             }
