@@ -286,7 +286,7 @@ jobs:
           fi
 
           pushd "$TARGET_DIR" >/dev/null
-          for row in $(echo "${{ toJSON(matrix.commands) }}" | jq -r '.[] | @base64'); do
+          for row in $(echo "${{ matrix.commands }}" | jq -r '.[] | @base64'); do
             COMMAND=$(echo "$row" | base64 --decode)
             echo "::group::$COMMAND"
             $COMMAND
