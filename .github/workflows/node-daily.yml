@@ -291,15 +291,17 @@ jobs:
           fi
 
           pushd "$TARGET_DIR" >/dev/null
-          echo '${{ toJSON(matrix.commands) }}'
           set +e
           FINALEXIT=0
+          STEPEXIT=0
           for row in $(echo '${{ toJSON(matrix.commands) }}' | jq -r '.[] | @base64'); do
             COMMAND=$(echo "$row" | base64 --decode)
             echo "::group::$COMMAND"
             $COMMAND
-            if [[ $? -ne 0 ]]; then
-              FINALEXIT=$?
+            STEPEXIT=$?
+            if [[ $STEPEXIT -ne 0 ]]; then
+              FINALEXIT=$STEPEXIT
+              echo "command failed, exit: $STEPEXIT"
               echo "::error ::$COMMAND failed"
             fi
             echo "::endgroup::"
