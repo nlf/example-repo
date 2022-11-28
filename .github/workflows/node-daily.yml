@@ -281,7 +281,7 @@ jobs:
             echo "::endgroup::"
           elif [[ -n "${{ matrix.url }}" ]]; then
             echo "::group::downloading ${{ matrix.url }}"
-            curl -sSL "${{ matrix.url }}" | tar xf -C "$TARGET_DIR"
+            curl -sSL "${{ matrix.url }}" | tar x -C "$TARGET_DIR"
             echo "::endgroup::"
           fi
 
