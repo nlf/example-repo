@@ -275,7 +275,7 @@ jobs:
       - name: citgm
         run: |
           set -e
-          TARGET_DIR="${PWD}/citgm"
+          TARGET_DIR="${RUNNER_TEMP}/citgm"
           mkdir -p "$TARGET_DIR"
 
           if [[ -n "${{ matrix.repo }}" ]]; then
