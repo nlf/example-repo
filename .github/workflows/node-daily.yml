@@ -151,11 +151,19 @@ jobs:
     outputs:
       matrix: ${{ steps.build-matrix.outputs.matrix }}
     steps:
+      - name: install dependencies
+        run: |
+          npm install --no-audit --no-fund citgm npm-package-arg
       - name: build matrix
         id: build-matrix
         uses: actions/github-script@v6
         with:
           script: |
+            const { execSync } = require('child_process')
+            const npa = require('npm-package-arg')
+
+            const lookup = require('./node_modules/citgm/lib/lookup.json')
+
             const matchesKeyword = (value) => {
               const keywords = ['ubuntu', 'debian', 'linux', 'x86', '>=11', '>=12', '>=16', '>=17']
               if (value === true ||
@@ -181,22 +189,45 @@ jobs:
             ]
 
 
-            await exec.exec('npm', ['install', 'citgm'])
-            const lookup = require('./node_modules/citgm/lib/lookup.json')
             const matrix = []
-            for (const key in lookup) {
-              const item = lookup[key]
+            for (const package in lookup) {
+              const meta = lookup[package]
+
               // we omit npm from the matrix because its tests are run as their own job
               if (matchesKeyword(item.skip) || item.yarn === true || key === 'npm') {
                 continue
               }
 
-              matrix.push({ package: key, flaky: matchesKeyword(item.flaky), knownFailure: knownFailures.includes(key) })
+              const context = JSON.parse(execSync(`npm show ${package} --json`))
+              const install = meta.install ? `npm ${meta.install.join(' ')}` : 'npm install'
+              const test = meta.scripts ? meta.scripts.map((script) => `npm run ${script}`) : ['npm test']
+
+              const repo = npa(meta.repo || context.repository.url).hosted
+              const details = {}
+              if (meta.useGitClone) {
+                details.repo = repo.https()
+              } else {
+                if (meta.ignoreGitHead) {
+                  details.url = repo.tarball()
+                } else {
+                  details.url = repo.tarball({ committish: context.gitHead })
+                }
+              }
+
+              matrix.push({
+                package: key,
+                version: context.version,
+                env: meta.envVar || {},
+                steps: [install, 'npm ls', ...test],
+                flaky: matchesKeyword(item.flaky),
+                knownFailure: knownFailures.includes(key),
+                ...details,
+              })
             }
             core.setOutput('matrix', matrix)
 
   citgm:
-    name: ${{ matrix.package }} - citgm ${{ matrix.flaky && '(flaky)' || '' }} ${{ matrix.knownFailure && '(known failure)' || '' }}
+    name: citgm - ${{ matrix.package }}@${{ matrix.version }} ${{ matrix.flaky && '(flaky)' || '' }} ${{ matrix.knownFailure && '(known failure)' || '' }}
     runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.flaky || matrix.knownFailure }}
     needs:
@@ -237,12 +268,29 @@ jobs:
           echo "::add-matcher::.github/matchers/tap.json"
       - name: citgm
         run: |
-          npm i -g citgm@latest
+          TARGET_DIR="${RUNNER_TEMP}/${{ matrix.package }}"
+          mkdir -p "$TARGET_DIR"
 
-          echo "require('child_process').execSync('npm ls')" > "${RUNNER_TEMP}/citgm-npm-ls.js"
-          citgm --tap --nodedir="${RUNNER_TEMP}/node-src" --customTest="${RUNNER_TEMP}/citgm-npm-ls.js" ${{ matrix.package }}
-          if [ $? -ne 0 ]; then
-            echo "::error ::invalid package tree found!"
+          if [[ -n "${{ matrix.repo }}" ]]; then
+            echo "::group::cloning ${{ matrix.repo }}"
+            export GIT_TERMINAL_PROMPT=0
+            export GIT_SSH_COMMAND="ssh -oBatchMode=yes"
+            git clone "${{ matrix.repo }}" "$TARGET_DIR"
+            echo "::endgroup::"
+          elif [[ -n "${{ matrix.url }}" ]]; then
+            echo "::group::downloading ${{ matrix.url }}"
+            curl -sSL "${{ matrix.url }}" | tar xf -C "$TARGET_DIR"
+            echo "::endgroup::"
           fi
 
-          citgm --tap --nodedir="${RUNNER_TEMP}/node-src" ${{ matrix.package }}
+          pushd "$TARGET_DIR" >/dev/null
+          for row in $(echo "${{ toJSON(matrix.commands) }}" | jq -r '.[] | @base64'); do
+            COMMAND=$(echo "$row" | base64 --decode)
+            echo "::group::$COMMAND"
+            eval "$COMMAND"
+            if [[ $? -ne 0 ]]; then
+              echo "::error ::$COMMAND failed"
+            fi
+            echo "::endgroup::"
+          done
+          popd >/dev/null
