@@ -214,20 +214,12 @@ jobs:
                 }
               }
 
-              const rawEnv = {
-                'npm_config_audit': '',
-                'npm_config_fund': '',
-                ...meta.envVar
-              }
-              const env = Object.keys(rawEnv).map((key) => {
-                return `${key}="${rawEnv[key]}"`
-              }).join(' ')
-
+              const env = { 'npm_config_audit': '', 'npm_config_fund': '', ...meta.envVar }
               matrix.push({
                 package,
                 version: context.version,
                 env,
-                steps: [install, 'npm ls', ...test],
+                commands: [install, 'npm ls', ...test],
                 flaky: matchesKeyword(item.flaky),
                 knownFailure: knownFailures.includes(key),
                 ...details,
@@ -239,6 +231,7 @@ jobs:
     name: citgm - ${{ matrix.package }}@${{ matrix.version }} ${{ matrix.flaky && '(flaky)' || '' }} ${{ matrix.knownFailure && '(known failure)' || '' }}
     runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.flaky || matrix.knownFailure }}
+    env: ${{ matrix.env }}
     needs:
       - build-nodejs
       - build-matrix
@@ -293,10 +286,10 @@ jobs:
           fi
 
           pushd "$TARGET_DIR" >/dev/null
-          for row in $(echo "${{ toJSON(matrix.steps) }}" | jq -r '.[] | @base64'); do
+          for row in $(echo "${{ toJSON(matrix.commands) }}" | jq -r '.[] | @base64'); do
             COMMAND=$(echo "$row" | base64 --decode)
             echo "::group::$COMMAND"
-            env ${{ matrix.env }} $COMMAND
+            $COMMAND
             if [[ $? -ne 0 ]]; then
               echo "::error ::$COMMAND failed"
             fi
