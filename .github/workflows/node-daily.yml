@@ -138,9 +138,6 @@ jobs:
           key: npm-tests
       - run: node --version
       - run: npm --version
-      - name: setup tap problem matcher
-        run: |
-          echo "::add-matcher::.github/matchers/tap.json"
       - name: test npm
         run: |
           set -e
@@ -201,8 +198,11 @@ jobs:
                 continue
               }
 
+              const install_flags = ['--no-audit', '--no-fund']
+              if (meta.install) {
+                install_flags.push(meta.install.slice(1))
+              }
               const context = JSON.parse(execSync(`npm show ${package} --json`))
-              const install = meta.install ? `npm ${meta.install.join(' ')}` : 'npm install'
               const test = meta.scripts ? meta.scripts.map((script) => `npm run ${script}`) : ['npm test']
 
               const repo = npa(meta.repo || context.repository.url).hosted
@@ -217,12 +217,13 @@ jobs:
                 }
               }
 
-              const env = { 'npm_config_audit': '', 'npm_config_fund': '', ...meta.envVar }
+              const env = { 'npm_config_audit': 'false', 'npm_config_fund': 'false', ...meta.envVar }
               matrix.push({
                 package,
                 version: context.version,
                 env,
-                commands: [install, 'npm ls', ...test],
+                install_flags: install_flags.join(' '),
+                commands: [...test],
                 flaky: matchesKeyword(meta.flaky),
                 knownFailure: knownFailures.includes(package),
                 ...details,
@@ -242,10 +243,6 @@ jobs:
       matrix:
         include: ${{ fromJson(needs.build-matrix.outputs.matrix) }}
     steps:
-      - name: checkout npm/cli
-        uses: actions/checkout@v3
-        with:
-          repository: npm/cli
       - name: download artifacts
         uses: actions/download-artifact@v3
         with:
@@ -258,6 +255,7 @@ jobs:
           mkdir -p "${RUNNER_TEMP}/node" "${RUNNER_TEMP}/node-src"
           tar xf "${RUNNER_TEMP}/build.tgz" -C "${RUNNER_TEMP}/node"
           tar xf "${RUNNER_TEMP}/source.tgz" -C "${RUNNER_TEMP}/node-src"
+          echo "source=${RUNNER_TEMP}/node-src" >> $GITHUB_OUTPUT
 
           echo "${RUNNER_TEMP}/node/bin" >> $GITHUB_PATH
           echo "cache=$(npm config get cache)" >> $GITHUB_OUTPUT
@@ -268,34 +266,35 @@ jobs:
           key: npm-${{ matrix.package }}
       - run: node --version
       - run: npm --version
-      - name: setup tap problem matcher
+      - name: download source
+        id: download
         run: |
-          echo "::add-matcher::.github/matchers/tap.json"
-      - name: citgm
-        env: ${{ matrix.env }}
-        run: |
-          set -e
+          set -eo pipefail
           TARGET_DIR="${RUNNER_TEMP}/${{ matrix.package }}"
           mkdir -p "$TARGET_DIR"
-
-          export npm_config_nodedir="${RUNNER_TEMP}/node-src"
+          echo "target=$TARGET_DIR" >> $GITHUB_OUTPUT
 
           if [[ -n "${{ matrix.repo }}" ]]; then
-            echo "::group::cloning ${{ matrix.repo }}"
             export GIT_TERMINAL_PROMPT=0
             export GIT_SSH_COMMAND="ssh -oBatchMode=yes"
             git clone "${{ matrix.repo }}" "$TARGET_DIR"
-            echo "::endgroup::"
           elif [[ -n "${{ matrix.url }}" ]]; then
-            echo "::group::downloading ${{ matrix.url }}"
             curl -sSL "${{ matrix.url }}" | tar xz -C "$TARGET_DIR" --strip=1
-            echo "::endgroup::"
           fi
-
-          pushd "$TARGET_DIR" >/dev/null
+      - name: install dependencies ${{ matrix.install_flags }}
+        run: |
+          npm install --nodedir="${{steps.install.outputs.source }}" ${{ matrix.install_flags }}
+      - name: list dependencies
+        run: |
+          npm ls
+      - name: ${{ join(matrix.commands, ' && ') }}
+        env: ${{ matrix.env }}
+        working-directory: ${{ steps.download.outputs.target }}
+        run: |
           set +e
           FINALEXIT=0
           STEPEXIT=0
+
           for row in $(echo '${{ toJSON(matrix.commands) }}' | jq -r '.[] | @base64'); do
             COMMAND=$(echo "$row" | base64 --decode)
             echo "::group::$COMMAND"
@@ -303,10 +302,8 @@ jobs:
             STEPEXIT=$?
             if [[ $STEPEXIT -ne 0 ]]; then
               FINALEXIT=$STEPEXIT
-              echo "command failed, exit: $STEPEXIT"
-              echo "::error ::$COMMAND failed"
+              echo "::error ::$COMMAND failed, exit: $STEPEXIT"
             fi
             echo "::endgroup::"
           done
           exit $FINALEXIT
-          popd >/dev/null
