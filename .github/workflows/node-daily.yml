@@ -217,7 +217,7 @@ jobs:
                 }
               }
 
-              const env = { 'npm_config_audit': 'false', 'npm_config_fund': 'false', ...meta.envVar }
+              const env = { ...meta.envVar }
               matrix.push({
                 package,
                 version: context.version,
@@ -251,10 +251,9 @@ jobs:
         id: install
         run: |
           set -e
-          mkdir -p "${RUNNER_TEMP}/node" "${RUNNER_TEMP}/node-src"
+          mkdir -p "${RUNNER_TEMP}/node"
           tar xf "${RUNNER_TEMP}/build.tgz" -C "${RUNNER_TEMP}/node"
-          tar xf "${RUNNER_TEMP}/source.tgz" -C "${RUNNER_TEMP}/node-src"
-          echo "source=${RUNNER_TEMP}/node-src" >> $GITHUB_OUTPUT
+          echo "nodedir=${RUNNER_TEMP}/node" >> $GITHUB_OUTPUT
 
           echo "${RUNNER_TEMP}/node/bin" >> $GITHUB_PATH
           echo "cache=$(npm config get cache)" >> $GITHUB_OUTPUT
@@ -283,7 +282,7 @@ jobs:
       - name: npm install ${{ matrix.install_flags }}
         working-directory: ${{ steps.download.outputs.target }}
         run: |
-          npm install --nodedir="${{steps.install.outputs.source }}" ${{ matrix.install_flags }}
+          npm install --nodedir="${{steps.install.outputs.nodedir }}" ${{ matrix.install_flags }}
       - name: npm ls
         working-directory: ${{ steps.download.outputs.target }}
         run: |
