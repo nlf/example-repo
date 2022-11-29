@@ -234,7 +234,6 @@ jobs:
   citgm:
     name: citgm - ${{ matrix.package }}@${{ matrix.version }} ${{ matrix.flaky && '(flaky)' || '' }} ${{ matrix.knownFailure && '(known failure)' || '' }}
     runs-on: ubuntu-latest
-    continue-on-error: ${{ matrix.flaky || matrix.knownFailure }}
     needs:
       - build-nodejs
       - build-matrix
@@ -297,16 +296,20 @@ jobs:
           FINALEXIT=0
           STEPEXIT=0
 
-          echo "flaky=${{ matrix.flaky }}"
-          echo "knownFailure=${{ matrix.knownFailure }}"
           for row in $(echo '${{ toJSON(matrix.commands) }}' | jq -r '.[] | @base64'); do
             COMMAND=$(echo "$row" | base64 --decode)
             echo "::group::$COMMAND"
             $COMMAND
             STEPEXIT=$?
             if [[ $STEPEXIT -ne 0 ]]; then
-              FINALEXIT=$STEPEXIT
-              echo "::error ::$COMMAND failed, exit: $STEPEXIT"
+              if [[ "${{ matrix.flaky }}" == "true" ]]; then
+                echo "::warning ::known flaky $COMMAND failed, exit: $STEPEXIT"
+              elif [[ "${{ matrix.knownFailure }}" == "true" ]]; then
+                echo "::warning ::known failing $COMMAND failed, exit: $STEPEXIT"
+              else
+                FINALEXIT=$STEPEXIT
+                echo "::error ::$COMMAND failed, exit: $STEPEXIT"
+              fi
             fi
             echo "::endgroup::"
           done
