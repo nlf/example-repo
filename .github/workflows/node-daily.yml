@@ -297,6 +297,14 @@ jobs:
 
           export npm_config_nodedir="${{ steps.install.outputs.nodedir }}"
 
+          # inlining some patches to make tests run
+          if [[ "${{ matrix.package }}" == "undici" ]]; then
+            sed -i.bak 's/--experimental-wasm-simd //' package.json
+            rm -f package.json.bak
+            sed -i.bak 's/--experimental-wasm-simd//' .taprc
+            rm -f .taprc.bak
+          fi
+
           for row in $(echo '${{ toJSON(matrix.commands) }}' | jq -r '.[] | @base64'); do
             COMMAND=$(echo "$row" | base64 --decode)
             echo "::group::$COMMAND"
