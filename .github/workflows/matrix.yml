@@ -1,0 +1,23 @@
+name: matrix testing
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-${{ matrix.version }}:
+    name: build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version:
+          - "18"
+          - "19"
+          - "nightly"
+    outputs:
+      version: ${{ steps.build.outputs.version }}
+    steps:
+      - name: build
+        run: |
+          FINAL_VERSION="${{ matrix.version }}.$(date +%s)"
+
+          echo "version=$FINAL_VERSION" >> $GITHUB_OUTPUT
