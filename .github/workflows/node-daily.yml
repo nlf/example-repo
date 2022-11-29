@@ -281,10 +281,12 @@ jobs:
           elif [[ -n "${{ matrix.url }}" ]]; then
             curl -sSL "${{ matrix.url }}" | tar xz -C "$TARGET_DIR" --strip=1
           fi
-      - name: install dependencies ${{ matrix.install_flags }}
+      - name: npm install ${{ matrix.install_flags }}
+        working-directory: ${{ steps.download.outputs.target }}
         run: |
           npm install --nodedir="${{steps.install.outputs.source }}" ${{ matrix.install_flags }}
-      - name: list dependencies
+      - name: npm ls
+        working-directory: ${{ steps.download.outputs.target }}
         run: |
           npm ls
       - name: ${{ join(matrix.commands, ' && ') }}
@@ -295,6 +297,8 @@ jobs:
           FINALEXIT=0
           STEPEXIT=0
 
+          echo "flaky=${{ matrix.flaky }}"
+          echo "knownFailure=${{ matrix.knownFailure }}"
           for row in $(echo '${{ toJSON(matrix.commands) }}' | jq -r '.[] | @base64'); do
             COMMAND=$(echo "$row" | base64 --decode)
             echo "::group::$COMMAND"
