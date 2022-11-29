@@ -295,7 +295,7 @@ jobs:
           FINALEXIT=0
           STEPEXIT=0
 
-          export npm_config_nodedir="${{ steps.install.outputs.source }}"
+          export npm_config_nodedir="${{ steps.install.outputs.nodedir }}"
 
           for row in $(echo '${{ toJSON(matrix.commands) }}' | jq -r '.[] | @base64'); do
             COMMAND=$(echo "$row" | base64 --decode)
