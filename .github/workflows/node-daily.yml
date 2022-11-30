@@ -279,10 +279,26 @@ jobs:
           elif [[ -n "${{ matrix.url }}" ]]; then
             curl -sSL "${{ matrix.url }}" | tar xz -C "$TARGET_DIR" --strip=1
           fi
+
+          if [[ -f "${TARGET_DIR}/package-lock.json" ]]; then
+            lockfileVersion=$(cat "${TARGET_DIR}/package-lock.json" | jq .lockfileVersion)
+            echo "lockfileVersion=$lockfileVersion" >> $GITHUB_OUTPUT
+          fi
       - name: npm install ${{ matrix.install_flags }}
         working-directory: ${{ steps.download.outputs.target }}
         run: |
           npm install --nodedir="${{steps.install.outputs.nodedir }}" ${{ matrix.install_flags }}
+      - name: verify lockfileVersion unchanged
+        working-directory: ${{ steps.download.outputs.target }}
+        if: ${{ steps.download.outputs.lockfileVersion }}
+        run: |
+          if [[ -f "package-lock.json" ]]; then
+            newLockfileVersion=$(cat "package-lock.json" | jq .lockfileVersion)
+            if [[ "$newLockfileVersion" != "${{ steps.download.outputs.lockfileVersion }}" ]]; then
+              echo "lockfileVersion changed from ${{ steps.download.outputs.lockfileVersion }} to $newLockfileVersion"
+              exit 1
+            fi
+          fi
       - name: npm ls
         working-directory: ${{ steps.download.outputs.target }}
         run: |
@@ -291,7 +307,6 @@ jobs:
         env: ${{ matrix.env }}
         working-directory: ${{ steps.download.outputs.target }}
         run: |
-          set +e
           FINALEXIT=0
           STEPEXIT=0
 
@@ -305,6 +320,14 @@ jobs:
             rm -f .taprc.bak
           fi
 
+          commandCount=$(echo '${{ toJSON(matrix.commands) }}' | jq -r 'length')
+          if [[ $commandCount -eq 1 ]]; then
+            COMMAND=$(echo '${{ toJSON(matrix.commands) }}' | jq -r '.[0]')
+            $COMMAND
+            exit $?
+          fi
+
+          set +e
           for row in $(echo '${{ toJSON(matrix.commands) }}' | jq -r '.[] | @base64'); do
             COMMAND=$(echo "$row" | base64 --decode)
             echo "::group::$COMMAND"
