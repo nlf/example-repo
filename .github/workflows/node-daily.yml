@@ -295,8 +295,13 @@ jobs:
           if [[ -f "package-lock.json" ]]; then
             newLockfileVersion=$(cat "package-lock.json" | jq .lockfileVersion)
             if [[ "$newLockfileVersion" != "${{ steps.download.outputs.lockfileVersion }}" ]]; then
-              echo "lockfileVersion changed from ${{ steps.download.outputs.lockfileVersion }} to $newLockfileVersion"
-              exit 1
+              logMessage="lockfileVersion changed from ${{ steps.download.outputs.lockfileVersion }} to $newLockfileVersion"
+              if [[ "${{ steps.download.outputs.lockfileVersion }}" -eq 1 ]]; then
+                echo "::warning ::$logMessage"
+              else
+                echo "::error ::$logMessage"
+                exit 1
+              fi
             fi
           fi
       - name: npm ls
