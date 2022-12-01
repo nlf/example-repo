@@ -312,6 +312,7 @@ jobs:
         env: ${{ matrix.env }}
         working-directory: ${{ steps.download.outputs.target }}
         run: |
+          set +e
           FINALEXIT=0
           STEPEXIT=0
 
@@ -329,10 +330,14 @@ jobs:
           if [[ $commandCount -eq 1 ]]; then
             COMMAND=$(echo '${{ toJSON(matrix.commands) }}' | jq -r '.[0]')
             $COMMAND
-            exit $?
+            STEPEXIT=$?
+            if [[ "${{ matrix.flaky }}" == "true" || "${{ matrix.knownFailure }}" == "true" ]]; then
+              echo "::warning ::$COMMAND failed, exit $STEPEXIT"
+              exit 0
+            fi
+            exit $STEPEXIT
           fi
 
-          set +e
           for row in $(echo '${{ toJSON(matrix.commands) }}' | jq -r '.[] | @base64'); do
             COMMAND=$(echo "$row" | base64 --decode)
             echo "::group::$COMMAND"
