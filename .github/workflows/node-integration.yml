@@ -60,28 +60,27 @@ jobs:
           echo "nodeVersion=${nodeVersion}" >> $GITHUB_OUTPUT
           echo "::endgroup::"
 
-          echo "::group::finding npm version matching ${{ inputs.npmVersion }}"
-          if [[ "${{ inputs.npmVersion }}" == "git" ]]; then
-            npmUrl="https://codeload.github.com/npm/cli/tar.gz/HEAD"
-            npmVersion=$(curl -sSL https://raw.githubusercontent.com/npm/cli/HEAD/package.json | jq -r '"\(.version)-git"')
-          else
-            npmVersion=$(curl -sSL https://registry.npmjs.org/npm |\
-              jq -r '.time | to_entries | map(select(.key | test("^[0-9]"))) | sort_by(.value | split(".") | "\(.[0])Z" | fromdate) | .[-1].key')
-            npmGitHead=$(npm show npm@$npmVersion --json | jq -r '.gitHead')
-            npmUrl="https://codeload.github.com/npm/cli/tar.gz/${npmGitHead}"
-          fi
-          echo "npmVersion=${npmVersion}" >> $GITHUB_OUTPUT
-          echo "::endgroup::"
-
           echo "::group::extracting source from $nodeUrl"
           mkdir -p "$sourceDir"
           curl -sSL "$nodeUrl" | tar xz -C "$sourceDir" --strip=1 
           echo "::endgroup::"
 
-          echo "::group::extracting npm source from $npmUrl"
+          echo "::group::cloning npm"
           mkdir -p "$npmDir"
-          curl -sSL "$npmUrl" | tar xz -C "$npmDir" --strip=1
+          git clone https://github.com/npm/cli.git "$npmDir"
+          npmVersion=$(cat "${npmDir}/package.json" | jq -r '"\(.version)-git"')
           echo "::endgroup::"
+
+          if [[ "${{ inputs.npmVersion }}" != "git" ]]; then
+            echo "::group::checking out npm@${{ inputs.npmVersion }}"
+            npmVersion=$(curl -sSL https://registry.npmjs.org/npm |\
+              jq -r '.time | to_entries | map(select(.key | test("^${{ inputs.npmVersion }}"))) | sort_by(.value | split(".") | "\(.[0])Z" | fromdate) | .[-1].key')
+            npmGitHead=$(npm show npm@$npmVersion --json | jq -r '.gitHead')
+            pushd "$npmDir" >/dev/null
+            git reset --hard "$npmGitHead"
+            popd >/dev/null
+            echo "::endgroup::"
+          fi
 
           echo "::group::packing npm release $npmVersion"
           pushd "$npmDir" >/dev/null
