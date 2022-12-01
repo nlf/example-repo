@@ -1,4 +1,4 @@
-name: nodejs nightly build
+name: nodejs integration
 
 on:
   workflow_dispatch:
@@ -19,20 +19,20 @@ permissions:
   actions: write
 
 concurrency:
-  group: ${{ github.workflow }}
+  group: ${{ github.workflow }}-${{ inputs.nodeVersion }}-${{ inputs.npmVersion }}
   cancel-in-progress: true
 
 jobs:
   build-nodejs:
-    name: build nodejs
+    name: build nodejs@${{ inputs.nodeVersion }} npm@${{ inputs.npmVersion }}
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.build-nodejs.outputs.nodeVersion }}
+      nodeVersion: ${{ steps.build-nodejs.outputs.nodeVersion }}
     steps:
       - name: setup ccache
         uses: Chocobo1/setup-ccache-action@v1
         with:
-          override_cache_key: nodejs-${{ input.nodeVersion }}
+          override_cache_key: nodejs-${{ inputs.nodeVersion }}
       - name: build nodejs
         id: build-nodejs
         run: |
@@ -48,14 +48,14 @@ jobs:
           echo "::group::finding nodejs version matching ${{ inputs.nodeVersion }}"
           if [[ "${{ inputs.nodeVersion }}" == "nightly" ]]; then
             nodeVersion=$(curl -sSL https://nodejs.org/download/nightly/index.json | jq -r .[0].version)
-            nodeUrl="https://nodejs.org/download/nightly/${version}/node-${version}.tar.gz"
+            nodeUrl="https://nodejs.org/download/nightly/${nodeVersion}/node-${nodeVersion}.tar.gz"
           else
             nodeVersion=$(curl -sSL https://nodejs.org/download/release/index.json | jq -r 'map(select(.version | test("^v${{ inputs.nodeVersion }}"))) | .[0].version')
-            if [[ -z "$version" ]]; then
+            if [[ -z "$nodeVersion" ]]; then
               echo "::error ::unable to find released nodejs version matching: ${{ inputs.nodeVersion }}"
               exit 1
             fi
-            nodeUrl="https://nodejs.org/download/release/${version}/node-${version}.tar.gz"
+            nodeUrl="https://nodejs.org/download/release/${nodeVersion}/node-${nodeVersion}.tar.gz"
           fi
           echo "nodeVersion=${nodeVersion}" >> $GITHUB_OUTPUT
           echo "::endgroup::"
@@ -67,7 +67,7 @@ jobs:
           else
             npmVersion=$(curl -sSL https://registry.npmjs.org/npm |\
               jq -r '.time | to_entries | map(select(.key | test("^[0-9]"))) | sort_by(.value | split(".") | "\(.[0])Z" | fromdate) | .[-1].key')
-            npmGitHead=$(npm show npm@$version --json | jq -r '.gitHead')
+            npmGitHead=$(npm show npm@$npmVersion --json | jq -r '.gitHead')
             npmUrl="https://codeload.github.com/npm/cli/tar.gz/${npmGitHead}"
           fi
           echo "npmVersion=${npmVersion}" >> $GITHUB_OUTPUT
@@ -133,7 +133,7 @@ jobs:
       - name: setup ccache
         uses: Chocobo1/setup-ccache-action@v1
         with:
-          override_cache_key: nodejs-${{ input.nodeVersion }}
+          override_cache_key: nodejs-${{ inputs.nodeVersion }}
       - name: download artifacts
         uses: actions/download-artifact@v3
         with:
@@ -154,9 +154,9 @@ jobs:
       - name: download artifacts
         uses: actions/download-artifact@v3
         with:
-          name: ${{ env.key_prefix }}-${{ needs.build-nodejs.outputs.version }}
+          name: nodejs-${{ needs.build-nodejs.outputs.nodeVersion }}
           path: ${{ runner.temp }}
-      - name: install nodejs ${{ needs.build-nodejs.outputs.version }}
+      - name: install nodejs ${{ needs.build-nodejs.outputs.nodeVersion }}
         id: install
         run: |
           set -e
@@ -177,12 +177,22 @@ jobs:
       - run: npm --version
       - name: test npm
         run: |
+          echo "::group::setup"
           set -e
-          pushd "${RUNNER_TEMP}/npm" >/dev/null
+          cd "${RUNNER_TEMP}/npm"
+          echo "::endgroup::"
+
+          echo "::group::npm run resetdeps"
           node . run resetdeps
+          echo "::endgroup::"
+
+          echo "::group::npm link"
           node . link
+          echo "::endgroup::"
+
+          echo "::group::npm test -ws -iwr --if-present --ignore-scripts"
           node . run test -ws -iwr --if-present --ignore-scripts
-          popd >/dev/null
+          echo "::endgroup::"
 
   generate-matrix:
     name: generate matrix
