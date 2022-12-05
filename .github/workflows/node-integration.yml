@@ -83,7 +83,7 @@ jobs:
           pushd "$npmDir" >/dev/null
           node . run resetdeps
           npmtarball="$(node . pack --loglevel=silent --json | jq -r .[0].filename)"
-          mv "$npmtarball" "$npmFile"
+          tar czf "$npmFile" -C "$npmDir" .
           popd >/dev/null
           echo "npm=$npmFile" >> $GITHUB_OUTPUT
           echo "::endgroup::"
@@ -91,7 +91,7 @@ jobs:
           echo "::group::updating nodejs bundled npm"
           rm -rf "${sourceDir}/deps/npm"
           mkdir -p "${sourceDir}/deps/npm"
-          tar xfz "$npmFile" -C "${sourceDir}/deps/npm" --strip=1
+          tar xfz "${npmDir}/${npmtarball}" -C "${sourceDir}/deps/npm" --strip=1
           echo "::endgroup::"
 
           echo "::group::packing nodejs source"
@@ -160,7 +160,7 @@ jobs:
           tar xf "${RUNNER_TEMP}/build.tgz" -C "${RUNNER_TEMP}/node"
 
           mkdir -p "${RUNNER_TEMP}/npm"
-          tar xf "${RUNNER_TEMP}/npm.tgz" -C "${RUNNER_TEMP}/npm" --strip=1
+          tar xf "${RUNNER_TEMP}/npm.tgz" -C "${RUNNER_TEMP}/npm"
 
           echo "${RUNNER_TEMP}/node/bin" >> $GITHUB_PATH
           echo "cache=$(npm config get cache)" >> $GITHUB_OUTPUT
@@ -176,7 +176,6 @@ jobs:
           echo "::group::setup"
           set -e
           cd "${RUNNER_TEMP}/npm"
-          ls
           echo "::endgroup::"
 
           echo "::group::npm run resetdeps"
