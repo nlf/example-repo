@@ -335,16 +335,24 @@ jobs:
             echo "lockfileVersion=$lockfileVersion" >> $GITHUB_OUTPUT
           fi
       - name: npm install ${{ matrix.install_flags }}
+        id: npm-install
         working-directory: ${{ steps.download.outputs.target }}
         run: |
           npm install --nodedir="${{steps.install.outputs.nodedir }}" ${{ matrix.install_flags }}
+          exitcode=$?
+          if [[ $exitcode -ne 0 && "${{ matrix.knownFailure }}" == "true" ]]; then
+            echo "::warning ::npm install failed, exit $exitcode"
+            echo "failed=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          exit $exitcode
       - name: verify lockfileVersion unchanged
         working-directory: ${{ steps.download.outputs.target }}
-        if: ${{ steps.download.outputs.lockfileVersion }}
+        if: ${{ steps.download.outputs.lockfileVersion && steps.npm-install.outputs.failed != 'true' }}
         run: |
           if [[ -f "package-lock.json" ]]; then
             newLockfileVersion=$(cat "package-lock.json" | jq .lockfileVersion)
-            if [[ "$newLockfileVersion" != "${{ steps.download.outputs.lockfileVersion }}" ]]; then
+            if [[ "$newLockfileVersion" -ne "${{ steps.download.outputs.lockfileVersion }}" ]]; then
               logMessage="lockfileVersion changed from ${{ steps.download.outputs.lockfileVersion }} to $newLockfileVersion"
               if [[ "${{ steps.download.outputs.lockfileVersion }}" -eq 1 ]]; then
                 echo "::warning ::$logMessage"
@@ -356,11 +364,13 @@ jobs:
           fi
       - name: npm ls
         working-directory: ${{ steps.download.outputs.target }}
+        if: ${{ steps.npm-install.outputs.failed != "true" }}
         run: |
           npm ls
       - name: ${{ join(matrix.commands, ' && ') }}
         env: ${{ matrix.env }}
         working-directory: ${{ steps.download.outputs.target }}
+        if: ${{ steps.npm-install.outputs.failed != "true" }}
         run: |
           set +e
           FINALEXIT=0
