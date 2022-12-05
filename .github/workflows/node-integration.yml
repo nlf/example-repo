@@ -37,6 +37,7 @@ jobs:
           npmDir="${RUNNER_TEMP}/npm"
           sourceDir="${RUNNER_TEMP}/src"
           targetDir="${RUNNER_TEMP}/build"
+          npmFile="${RUNNER_TEMP}/npm.tgz"
           sourceFile="${RUNNER_TEMP}/source.tgz"
           targetFile="${RUNNER_TEMP}/build.tgz"
           echo "::endgroup::"
@@ -82,15 +83,15 @@ jobs:
           pushd "$npmDir" >/dev/null
           node . run resetdeps
           npmtarball="$(node . pack --loglevel=silent --json | jq -r .[0].filename)"
-          mv "$npmtarball" "npm.tgz"
+          mv "$npmtarball" "$npmFile"
           popd >/dev/null
-          echo "npm=${npmDir}/npm.tgz" >> $GITHUB_OUTPUT
+          echo "npm=$npmFile" >> $GITHUB_OUTPUT
           echo "::endgroup::"
 
           echo "::group::updating nodejs bundled npm"
           rm -rf "${sourceDir}/deps/npm"
           mkdir -p "${sourceDir}/deps/npm"
-          tar xfz "${npmDir}/npm.tgz" -C "${sourceDir}/deps/npm" --strip=1
+          tar xfz "$npmFile" -C "${sourceDir}/deps/npm" --strip=1
           echo "::endgroup::"
 
           echo "::group::packing nodejs source"
@@ -155,6 +156,7 @@ jobs:
         id: install
         run: |
           set -e
+          ls "$RUNNER_TEMP"
           mkdir -p "${RUNNER_TEMP}/node"
           tar xf "${RUNNER_TEMP}/build.tgz" -C "${RUNNER_TEMP}/node"
 
