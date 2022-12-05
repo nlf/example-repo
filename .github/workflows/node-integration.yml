@@ -231,8 +231,13 @@ jobs:
               'resolve', // compares results to require.resolve and fails, also missing inspector/promises
               'serialport', // esbuild barfs on node 20.0.0-pre
               'uuid', // tests that crypto.getRandomValues throws but it doesn't
+              'weak', // doesn't seem to build in node >12
             ]
 
+            // this is a manually updated list of packages that are flaky
+            const supplementalFlaky = [
+              'tough-cookie', // race condition test/node_util_fallback_test.js:87
+            ]
 
             const matrix = []
             for (const package in lookup) {
@@ -269,7 +274,7 @@ jobs:
                 env,
                 install_flags: install_flags.join(' '),
                 commands: [...test],
-                flaky: matchesKeyword(meta.flaky),
+                flaky: matchesKeyword(meta.flaky) || supplementalFlaky.includes(package),
                 knownFailure: knownFailures.includes(package),
                 ...details,
               })
