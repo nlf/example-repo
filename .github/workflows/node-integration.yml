@@ -376,9 +376,11 @@ jobs:
             COMMAND=$(echo '${{ toJSON(matrix.commands) }}' | jq -r '.[0]')
             $COMMAND
             STEPEXIT=$?
-            if [[ "${{ matrix.flaky }}" == "true" || "${{ matrix.knownFailure }}" == "true" ]]; then
-              echo "::warning ::$COMMAND failed, exit $STEPEXIT"
-              exit 0
+            if [[ $STEPEXIT -ne 0 ]]; then
+              if [[ "${{ matrix.flaky }}" == "true" || "${{ matrix.knownFailure }}" == "true" ]]; then
+                echo "::warning ::$COMMAND failed, exit $STEPEXIT"
+                exit 0
+              fi
             fi
             exit $STEPEXIT
           fi
