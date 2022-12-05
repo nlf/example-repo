@@ -18,10 +18,6 @@ on:
 permissions:
   actions: write
 
-concurrency:
-  group: ${{ github.workflow }}-${{ inputs.nodeVersion }}-${{ inputs.npmVersion }}
-  cancel-in-progress: true
-
 jobs:
   build-nodejs:
     name: build nodejs@${{ inputs.nodeVersion }} npm@${{ inputs.npmVersion }}
