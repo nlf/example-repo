@@ -156,7 +156,6 @@ jobs:
         id: install
         run: |
           set -e
-          ls "$RUNNER_TEMP"
           mkdir -p "${RUNNER_TEMP}/node"
           tar xf "${RUNNER_TEMP}/build.tgz" -C "${RUNNER_TEMP}/node"
 
@@ -177,6 +176,7 @@ jobs:
           echo "::group::setup"
           set -e
           cd "${RUNNER_TEMP}/npm"
+          ls
           echo "::endgroup::"
 
           echo "::group::npm run resetdeps"
