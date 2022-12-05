@@ -338,6 +338,7 @@ jobs:
         id: npm-install
         working-directory: ${{ steps.download.outputs.target }}
         run: |
+          set +e
           npm install --nodedir="${{steps.install.outputs.nodedir }}" ${{ matrix.install_flags }}
           exitcode=$?
           if [[ $exitcode -ne 0 && "${{ matrix.knownFailure }}" == "true" ]]; then
