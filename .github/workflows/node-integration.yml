@@ -364,13 +364,13 @@ jobs:
           fi
       - name: npm ls
         working-directory: ${{ steps.download.outputs.target }}
-        if: ${{ steps.npm-install.outputs.failed != "true" }}
+        if: ${{ steps.npm-install.outputs.failed != 'true' }}
         run: |
           npm ls
       - name: ${{ join(matrix.commands, ' && ') }}
         env: ${{ matrix.env }}
         working-directory: ${{ steps.download.outputs.target }}
-        if: ${{ steps.npm-install.outputs.failed != "true" }}
+        if: ${{ steps.npm-install.outputs.failed != 'true' }}
         run: |
           set +e
           FINALEXIT=0
