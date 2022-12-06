@@ -186,9 +186,31 @@ jobs:
           node . link
           echo "::endgroup::"
 
-          echo "::group::npm test -ws -iwr --if-present --ignore-scripts"
-          node . run test -ws -iwr --if-present --ignore-scripts
+          STEPEXIT=0
+          FINALEXIT=0
+
+          set +e
+          echo "::group::npm test"
+          node . test --ignore-scripts
+          STEPEXIT=$?
+          if [[ $STEPEXIT -ne 0 ]]; then
+            echo "::warning ::npm test failed, exit: $STEPEXIT"
+            FINALEXIT=STEPEXIT
+          fi
           echo "::endgroup::"
+
+          for workspace in $(npm query .workspace | jq -r .[].name); do
+            echo "::group::npm test -w $workspace"
+            node . test -w $workspace --if-present --ignore-scripts
+            STEPEXIT=$?
+            if [[ $STEPEXIT -ne 0 ]]; then
+              echo "::warning ::npm test -w $workspace failed, exit: $STEPEXIT"
+              FINALEXIT=STEPEXIT
+            fi
+            echo "::endgroup::"
+          done
+
+          exit $FINALEXIT
 
   generate-matrix:
     name: generate matrix
