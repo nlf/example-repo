@@ -10,7 +10,6 @@ on:
 
 jobs:
   build:
-    id: build-${{ inputs.nodeVersion }}
     name: build ${{ inputs.nodeVersion }}
     runs-on: ubuntu-latest
     strategy:
