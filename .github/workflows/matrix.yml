@@ -1,11 +1,17 @@
-name: matrix testing
+name: matrix testing ${{ inputs.nodeVersion }}
 
 on:
   workflow_dispatch:
+    inputs:
+      nodeVersion:
+        type: string
+        default: "nightly"
+        required: true
 
 jobs:
-  build-${{ matrix.version }}:
-    name: build
+  build:
+    id: build-${{ inputs.nodeVersion }}
+    name: build ${{ inputs.nodeVersion }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
