@@ -1,4 +1,4 @@
-name: matrix testing ${{ inputs.nodeVersion }}
+name: matrix testing
 
 on:
   workflow_dispatch:
