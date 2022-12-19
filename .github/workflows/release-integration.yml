@@ -12,29 +12,27 @@ on:
         required: true
 
 jobs:
-  node-integration:
-    name: nodejs@${{ matrix.nodeVersion }} integration
-    if: ${{ inputs.npmVersion || startsWith(github.ref_name, 'v') }}
+  npm-version:
     env:
       npmVersion: ${{ inputs.npmVersion || github.ref_name }}
+    name: determine npm version
+    if: ${{ inputs.npmVersion || startsWith(github.ref_name, 'v') }}
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        nodeVersion:
-          - 18
-          - 19
-          - nightly
+    outputs:
+      npmVersion: ${{ steps.version.outputs.npmVersion }}
     steps:
-      - uses: actions/checkout@v3
       - name: clean npm version
         id: version
         run: |
           npmVersion="${{ env.npmVersion }}"
           npmVersion="${npmVersion/#v}"
           echo "npmVersion=${npmVersion}" >> $GITHUB_OUTPUT
-      - name: nodejs@${{ matrix.nodeVersion }} npm@${{ steps.version.outputs.npmVersion }}
-        uses: ./.github/workflows/node-integration.yml
-        with:
-          nodeVersion: ${{ matrix.nodeVersion }}
-          npmVersion: ${{ steps.version.outputs.npmVersion }}
+  node-integration:
+    name: nodejs@${{ matrix.nodeVersion }} integration
+    needs:
+      - npm-version
+    uses: ./.github/workflows/node-integration.yml
+    with:
+      nodeVersion: ${{ matrix.nodeVersion }}
+      npmVersion: ${{ needs.npm-version.outputs.npmVersion }}
 
