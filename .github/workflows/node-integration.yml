@@ -1,6 +1,19 @@
 name: nodejs integration
 
 on:
+  workflow_call:
+    inputs:
+      nodeVersion:
+        description: 'nodejs version'
+        required: true
+        type: string
+        default: nightly
+      npmVersion:
+        description: 'npm version'
+        required: true
+        type: string
+        default: git
+
   workflow_dispatch:
     inputs:
       nodeVersion:
@@ -69,10 +82,12 @@ jobs:
           echo "::endgroup::"
 
           if [[ "${{ inputs.npmVersion }}" != "git" ]]; then
+            npmVersionFilter="${{ inputs.npmVersion }}"
+            npmVersionFilter="${npmVersion/#v}"
             echo "::group::checking out npm@${{ inputs.npmVersion }}"
             pushd "$npmDir" >/dev/null
             npmVersion=$(curl -sSL https://registry.npmjs.org/npm |\
-              jq -r '.time | to_entries | map(select(.key | test("^${{ inputs.npmVersion }}"))) | sort_by(.value | split(".") | "\(.[0])Z" | fromdate) | .[-1].key')
+              jq -r '.time | to_entries | map(select(.key | test("\""^${npmVersionFilter}"\""))) | sort_by(.value | split("\""."\"") | "\""\(.[0])Z"\"" | fromdate) | .[-1].key')
             npmGitHead=$(git show-ref --tags "v${npmVersion}" | cut -d' ' -f1)
             git reset --hard "$npmGitHead"
             popd >/dev/null

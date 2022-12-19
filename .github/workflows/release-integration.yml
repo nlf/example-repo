@@ -1,0 +1,23 @@
+name: release integration
+
+on:
+  release:
+    type:
+      - published
+  workflow_dispatch:
+
+jobs:
+  node-integration:
+    name: nodejs@${{ matrix.nodeVersion }} integration
+    if: ${{ startsWith(github.ref_name, 'v') }}
+    strategy:
+      matrix:
+        nodeVersion:
+          - 18
+          - 19
+          - nightly
+    uses: ./.github/workflows/node-integration.yml
+    with:
+      nodeVersion: ${{ matrix.nodeVersion }}
+      npmVersion: ${{ github.ref_name }}
+
