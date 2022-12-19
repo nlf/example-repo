@@ -16,15 +16,23 @@ jobs:
     env:
       npmVersion: ${{ inputs.npmVersion || github.ref_name }}
     name: nodejs@${{ matrix.nodeVersion }} integration
-    if: ${{ startsWith(github.ref_name, 'v') }}
+    if: ${{ inputs.npmVersion || startsWith(github.ref_name, 'v') }}
     strategy:
       matrix:
         nodeVersion:
           - 18
           - 19
           - nightly
-    uses: ./.github/workflows/node-integration.yml
-    with:
-      nodeVersion: ${{ matrix.nodeVersion }}
-      npmVersion: ${{ env.npmVersion }}
+    steps:
+      - name: clean npm version
+        id: version
+        run: |
+          npmVersion="${{ env.npmVersion }}"
+          npmVersion="${npmVersion/#v}"
+          echo "npmVersion=${npmVersion}" >> $GITHUB_OUTPUT
+      - name: nodejs@${{ matrix.nodeVersion }} npm@${{ steps.version.outputs.npmVersion }}
+        uses: ./.github/workflows/node-integration.yml
+        with:
+          nodeVersion: ${{ matrix.nodeVersion }}
+          npmVersion: ${{ steps.version.outputs.npmVersion }}
 
