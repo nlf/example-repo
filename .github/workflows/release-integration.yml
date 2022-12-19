@@ -5,9 +5,16 @@ on:
     type:
       - published
   workflow_dispatch:
+    inputs:
+      npmVersion:
+        description: npm version to test
+        type: string
+        required: true
 
 jobs:
   node-integration:
+    env:
+      npmVersion: ${{ inputs.npmVersion || github.ref_name }}
     name: nodejs@${{ matrix.nodeVersion }} integration
     if: ${{ startsWith(github.ref_name, 'v') }}
     strategy:
@@ -19,5 +26,5 @@ jobs:
     uses: ./.github/workflows/node-integration.yml
     with:
       nodeVersion: ${{ matrix.nodeVersion }}
-      npmVersion: ${{ github.ref_name }}
+      npmVersion: ${{ env.npmVersion }}
 
