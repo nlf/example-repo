@@ -29,6 +29,12 @@ jobs:
           echo "npmVersion=${npmVersion}" >> $GITHUB_OUTPUT
   node-integration:
     name: nodejs@${{ matrix.nodeVersion }} integration
+    strategy:
+      matrix:
+        nodeVersion:
+          - 18
+          - 19
+          - nightly
     needs:
       - npm-version
     uses: ./.github/workflows/node-integration.yml
