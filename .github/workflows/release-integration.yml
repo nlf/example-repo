@@ -13,10 +13,11 @@ on:
 
 jobs:
   node-integration:
-    env:
-      npmVersion: ${{ inputs.npmVersion || github.ref_name }}
     name: nodejs@${{ matrix.nodeVersion }} integration
     if: ${{ inputs.npmVersion || startsWith(github.ref_name, 'v') }}
+    env:
+      npmVersion: ${{ inputs.npmVersion || github.ref_name }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         nodeVersion:
