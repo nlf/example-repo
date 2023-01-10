@@ -30,6 +30,7 @@ jobs:
   node-integration:
     name: nodejs@${{ matrix.nodeVersion }} integration
     strategy:
+      fail-fast: false
       matrix:
         nodeVersion:
           - 18
