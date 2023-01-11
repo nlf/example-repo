@@ -2,7 +2,7 @@ name: release integration
 
 on:
   release:
-    type:
+    types:
       - published
   workflow_dispatch:
     inputs:
