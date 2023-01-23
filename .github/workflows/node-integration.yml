@@ -84,7 +84,7 @@ jobs:
           if [[ "${{ inputs.npmVersion }}" != "git" ]]; then
             npmVersion="${{ inputs.npmVersion }}"
             npmVersion="${npmVersion#v}"
-            echo "::group::checking out npm@${{ npmVersion }}"
+            echo "::group::checking out npm@${npmVersion}"
             pushd "$npmDir" >/dev/null
             taggedSha=$(git show-ref --tags "v${npmVersion}" | cut -d' ' -f1)
             git reset --hard "$taggedSha"
