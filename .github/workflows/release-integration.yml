@@ -28,6 +28,7 @@ jobs:
   pr-comment:
     name: add comment to pull request
     if: ${{ inputs.pullRequest }}
+    runs-on: ubuntu-latest
     steps:
       - name: add comment
         run: |
