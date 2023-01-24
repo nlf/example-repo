@@ -14,5 +14,8 @@
     "@npmcli/eslint-config": "^3.0.1",
     "eslint": "^8.14.0",
     "tap": "^16.1.0"
+  },
+  "dependencies": {
+    "yaml": "^2.2.1"
   }
 }
