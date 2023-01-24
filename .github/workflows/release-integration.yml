@@ -29,6 +29,8 @@ jobs:
     name: add comment to pull request
     if: ${{ inputs.pullRequest }}
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - name: add comment
         run: |
