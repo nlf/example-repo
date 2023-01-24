@@ -27,6 +27,7 @@ jobs:
 
   integration:
     name: integration test
+    needs: [release]
     uses: ./.github/workflows/release-integration.yml
     with:
       npmVersion: ${{ inputs.version }}
