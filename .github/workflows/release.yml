@@ -2,13 +2,17 @@ name: release
 
 on:
   workflow_call:
-    inputs: &inputs
+    inputs:
       version:
         description: 'version to release'
         required: true
         type: string
   workflow_dispatch:
-    inputs: *inputs
+    inputs:
+      version:
+        description: 'version to release'
+        required: true
+        type: string
 
 jobs:
   release:
