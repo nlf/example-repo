@@ -30,8 +30,8 @@ jobs:
     if: ${{ inputs.pullRequest }}
     steps:
       - name: add comment
-      run: |
-        gh pr comment ${{ inputs.pullRequest }} --edit-last --body "citgm: ${{ github.server_url }}/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        run: |
+          gh pr comment ${{ inputs.pullRequest }} --edit-last --body "citgm: ${{ github.server_url }}/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
   node-integration:
     name: nodejs@${{ matrix.nodeVersion }} integration
