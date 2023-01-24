@@ -18,6 +18,8 @@ jobs:
   release:
     name: publish release
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - name: publish release
         run: |
