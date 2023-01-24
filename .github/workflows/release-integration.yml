@@ -4,7 +4,7 @@ on:
   release:
     types: [published]
   workflow_call:
-    inputs:
+    inputs: &inputs
       npmVersion:
         description: npm version to test
         type: string
@@ -14,15 +14,7 @@ on:
         type: string
         required: false
   workflow_dispatch:
-    inputs:
-      npmVersion:
-        description: npm version to test
-        type: string
-        required: true
-      pullRequest:
-        description: pull request number
-        type: string
-        required: false
+    inputs: *inputs
 
 jobs:
   pr-comment:
