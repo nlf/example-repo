@@ -1,0 +1,20 @@
+name: release
+
+on:
+  workflow_call:
+    inputs: &inputs
+      version:
+        description: 'version to release'
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs: *inputs
+
+jobs:
+  release:
+    name: publish release
+    runs-on: ubuntu-latest
+    steps:
+      - name: publish release
+        run: |
+          gh release create ${{ inputs.version }} --title ${{ inputs.version }} --notes 'release ${{ inputs.version }}'
