@@ -38,12 +38,12 @@ jobs:
           gh pr comment ${{ inputs.pullRequest }} \
             --edit-last \
             --repo '${{ github.repository }}' \
-            --body "citgm: ${{ github.server_url }}/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            --body "citgm: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           if [[ $? -ne 0 ]]; then
             set -e
             gh pr comment ${{ inputs.pullRequest }} \
               --repo '${{ github.repository }}' \
-              --body "citgm: ${{ github.server_url }}/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+              --body "citgm: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           fi
 
   node-integration:
