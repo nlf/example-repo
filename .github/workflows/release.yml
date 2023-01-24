@@ -24,3 +24,9 @@ jobs:
       - name: publish release
         run: |
           gh release create ${{ inputs.version }} --title ${{ inputs.version }} --notes 'release ${{ inputs.version }}' --repo '${{ github.repository }}'
+
+  integration:
+    name: integration test
+    uses: ./.github/workflows/release-integration.yml
+    with:
+      npmVersion: ${{ inputs.version }}
