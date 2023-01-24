@@ -23,4 +23,4 @@ jobs:
     steps:
       - name: publish release
         run: |
-          gh release create ${{ inputs.version }} --title ${{ inputs.version }} --notes 'release ${{ inputs.version }}'
+          gh release create ${{ inputs.version }} --title ${{ inputs.version }} --notes 'release ${{ inputs.version }}' --repo '${{ github.repository }}'
