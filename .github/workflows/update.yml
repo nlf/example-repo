@@ -1,7 +1,7 @@
 name: Update a thing
 
 on:
-  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: write
