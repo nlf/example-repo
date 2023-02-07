@@ -18,5 +18,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           PR_REF=$(gh api '${{ github.event.issue.pull_request.url }}' -q .head.ref)
+          git fetch origin "$PR_REF"
           git merge "$PR_REF" --ff-only
           git status
