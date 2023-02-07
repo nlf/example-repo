@@ -22,6 +22,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          git config --global user.email "npm-cli+bot@github.com"
+          git config --global user.name "npm CLI robot"
+
           PR_NUMBER=$(gh api '${{ github.event.issue.pull_request.url }}' -q .number)
           BASE_REF=$(gh api '${{ github.event.issue.pull_request.url }}' -q .base.ref)
           PR_REF=$(gh api '${{ github.event.issue.pull_request.url }}' -q .head.ref)
