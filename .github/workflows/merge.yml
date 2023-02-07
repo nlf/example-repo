@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Determine git ref
+        env:
+          GH_TOKEN: ${{ github.token }}
         id: ref
         run: |
           REF=$(gh api '${{ github.event.issue.pull_request.url }}' -q .head.ref)
