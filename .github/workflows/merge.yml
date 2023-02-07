@@ -2,8 +2,8 @@ name: Rebase Merge
 
 on:
   issue_comment:
-  types:
-    - created
+    types:
+      - created
 
 jobs:
   merge:
