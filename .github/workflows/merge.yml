@@ -1,0 +1,19 @@
+name: Rebase Merge
+
+on:
+  issue_comment:
+  types:
+    - created
+
+jobs:
+  merge:
+    name: Rebase Merge
+    if: ${{ github.event.issue.pull_request }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check user permissions
+        id: permissions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api '/repos/${{ github.repository }}/collaborators/${{ github.event.issue.sender }}/permission' -q .permission
