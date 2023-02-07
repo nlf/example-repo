@@ -30,8 +30,6 @@ jobs:
           PR_REF=$(gh api '${{ github.event.issue.pull_request.url }}' -q .head.ref)
           echo "gh pr checkout $PR_NUMBER"
           gh pr checkout "$PR_NUMBER"
-          echo "git rebase $BASE_REF"
-          git rebase "$BASE_REF"
           echo "git checkout $BASE_REF"
           git checkout "$BASE_REF"
           echo "git merge $PR_REF --ff-only"
