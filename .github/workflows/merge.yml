@@ -1,4 +1,4 @@
-name: Rebase Merge
+name: Merge
 
 on:
   issue_comment:
@@ -10,29 +10,38 @@ permissions:
 
 jobs:
   merge:
-    name: Rebase Merge
-    if: ${{ github.event.issue.pull_request && github.event.comment.author_association == 'OWNER' && startsWith(github.event.comment.body, '@npm-cli-bot rebase merge') }}
+    name: Merge
+    if: ${{ github.event.issue.pull_request && github.event.comment.author_association == 'OWNER' && startsWith(github.event.comment.body, '@npm-cli-bot merge') }}
     runs-on: ubuntu-latest
     steps:
+      - name: Gather metadata
+        id: metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # retrieve some data from the pull request
+          PR_META=$(gh api '${{ github.event.issue.pull_request.url }}' -q '{ number: .number, base: .base.ref, head: .head.ref }')
+          PR_NUMBER=$(echo "$PR_META" | jq .number)
+          HEAD_REF=$(echo "$PR_META" | jq .head)
+          BASE_REF=$(echo "$PR_META" | jq .base)
+
+          echo "number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "head=$HEAD_REF" >> $GITHUB_OUTPUT
+          echo "base=$BASE_REF" >> $GITHUB_OUTPUT
       - name: Checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: '0'
-      - name: Rebase
+          ref: ${{ steps.metadata.outputs.base }}
+      - name: Merge
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # configure the git user
           git config --global user.email "npm-cli+bot@github.com"
           git config --global user.name "npm CLI robot"
 
-          PR_NUMBER=$(gh api '${{ github.event.issue.pull_request.url }}' -q .number)
-          BASE_REF=$(gh api '${{ github.event.issue.pull_request.url }}' -q .base.ref)
-          PR_REF=$(gh api '${{ github.event.issue.pull_request.url }}' -q .head.ref)
-          echo "gh pr checkout $PR_NUMBER"
-          gh pr checkout "$PR_NUMBER"
-          echo "git checkout $BASE_REF"
-          git checkout "$BASE_REF"
-          echo "git merge $PR_REF --ff-only"
-          git merge "$PR_REF" --ff-only
-          echo "git push"
+          gh pr checkout "${{ steps.metadata.outputs.number }}"
+          git checkout "${{ steps.metadata.outputs.base }}"
+          git merge "${{ steps.metadata.outputs.head }}" --ff-only
           git push
