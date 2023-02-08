@@ -42,7 +42,7 @@ jobs:
           git config --global user.name "npm CLI robot"
 
           gh pr checkout "${{ steps.metadata.outputs.number }}"
-          git rebase --onto "${{ steps.metadata.outputs.base }}..." "${{ steps.metadata.outputs.base }}"
+          git rebase -S --onto "${{ steps.metadata.outputs.base }}..." "${{ steps.metadata.outputs.base }}"
           git checkout "${{ steps.metadata.outputs.base }}"
           git merge "${{ steps.metadata.outputs.head }}" --ff-only
           git push
