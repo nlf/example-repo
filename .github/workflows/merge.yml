@@ -21,9 +21,9 @@ jobs:
         run: |
           # retrieve some data from the pull request
           PR_META=$(gh api '${{ github.event.issue.pull_request.url }}' -q '{ number: .number, base: .base.ref, head: .head.ref }')
-          PR_NUMBER=$(echo "$PR_META" | jq .number)
-          HEAD_REF=$(echo "$PR_META" | jq .head)
-          BASE_REF=$(echo "$PR_META" | jq .base)
+          PR_NUMBER=$(echo "$PR_META" | jq -r .number)
+          HEAD_REF=$(echo "$PR_META" | jq -r .head)
+          BASE_REF=$(echo "$PR_META" | jq -r .base)
 
           echo "number=$PR_NUMBER" >> $GITHUB_OUTPUT
           echo "head=$HEAD_REF" >> $GITHUB_OUTPUT
