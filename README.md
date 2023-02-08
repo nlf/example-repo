@@ -7,3 +7,5 @@ And another!
 And added yet another line
 
 And another line to test rebase
+
+And one more just so we have multiple commits
