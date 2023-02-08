@@ -1,0 +1,15 @@
+name: Merge
+
+on:
+  repository_dispatch:
+    types: ff_merge
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Output payload
+        env:
+          CONTEXT: ${{ toJSON(github.event) }}
+        run: |
+          echo "$CONTEXT"

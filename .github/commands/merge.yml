@@ -1,0 +1,8 @@
+trigger: merge
+title: Merge Pull Request
+description: Perform a fast-forward only merge of this pull request into its base branch
+surfaces:
+- pull_request
+steps:
+- type: repository_dispatch
+  eventType: ff_merge
