@@ -42,6 +42,7 @@ jobs:
           git config --global user.name "npm CLI robot"
 
           gh pr checkout "${{ steps.metadata.outputs.number }}"
+          git merge "${{ steps.metadata.outputs.base }}" --ff-only
           git checkout "${{ steps.metadata.outputs.base }}"
           git merge "${{ steps.metadata.outputs.head }}" --ff-only
           git push
